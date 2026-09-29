@@ -1,0 +1,76 @@
+# Nextep — local and single-server setup.
+#
+#   docker compose up --build                  # database + migrations + app on http://localhost:3000
+#   docker compose run --rm seed               # load demo data (once, after `up`)
+#   docker compose up -d db                    # only the database, for `npm run dev`
+
+name: nextep
+
+services:
+  db:
+    # Multi-arch PostGIS build (amd64 + arm64) by the PostGIS docker maintainers;
+    # the official postgis/postgis image is amd64-only.
+    image: imresamu/postgis:17-3.6
+    environment:
+      POSTGRES_USER: nextep
+      POSTGRES_PASSWORD: nextep
+      POSTGRES_DB: nextep
+    ports:
+      - '5432:5432'
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nextep -d nextep']
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  migrate:
+    build:
+      context: .
+      target: build
+    command: ['npm', 'run', 'db:migrate']
+    environment:
+      DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runtime
+    environment:
+      DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
+      # Deliberately not PUBLIC_URL: that one in .env is for `npm run dev` (port 5173).
+      ORIGIN: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
+      PUBLIC_URL: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
+      # Sign-in (values are read from .env; unset providers are hidden)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+      MICROSOFT_TENANT: ${MICROSOFT_TENANT:-common}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+    ports:
+      - '3000:3000'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  seed:
+    build:
+      context: .
+      target: build
+    command: ['npm', 'run', 'db:seed']
+    environment:
+      DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
+      PUBLIC_URL: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles: [tools]
+
+volumes:
+  db-data:
