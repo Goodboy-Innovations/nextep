@@ -28,11 +28,15 @@ Valmiina ja testattuna upotettua Postgresia (PGlite + PostGIS) vasten:
 
 Ei vielä testattu: nostoviikon vaihtuminen päiväsuodattimella oikealla datalla (demodatassa ei ole ensi viikon nostoja; logiikka yksikkötestattu). Selainta ei ole käytössä, joten käyttöliittymä on tarkistettu vain SSR-HTML:stä — katso ulkoasu itse.
 
-Ei vielä: Docker-pinoa ei ole ajettu kertaakaan (WSL-integraatio puuttui), ei committeja (git init tehty), ei kirjautumisyritysten rajoitusta, ei salasanan vaihtoa/unohtunut salasana, ei ICS-tuontia, ei i18n:ää.
+Ei vielä: Docker-pinoa ei ole ajettu kertaakaan (WSL-integraatio puuttui), ei CI:tä (GitHub Actions -työnkulku poistettiin ennen julkaisua), ei kirjautumisyritysten rajoitusta, ei salasanan vaihtoa/unohtunut salasana, ei ICS-tuontia, ei i18n:ää.
 
 ## Seuraava tehtävä
 
-Ei sovittu. Ehdokkaita: haun ulkoasun hienosäätö käyttäjän palautteen perusteella, ensimmäinen commit, kirjautumisyritysten rajoitus, salasanan palautus.
+Ei sovittu. Ehdokkaita: haun ulkoasun hienosäätö käyttäjän palautteen perusteella, kirjautumisyritysten rajoitus, salasanan palautus.
+
+## Repo
+
+Julkinen: https://github.com/Jakeksii/nextep (haara `main`).
 
 ## Ympäristö (tämä kone, WSL)
 
