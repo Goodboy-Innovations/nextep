@@ -15,10 +15,12 @@ describe('checkConfig', () => {
 			ADMIN_EMAILS: 'a@example.com, b@example.com',
 			SEED_ON_START: '1',
 			SEED_ADMIN_EMAIL: 'admin@example.com',
-			SEED_ADMIN_PASSWORD: 'seed-secret'
+			SEED_ADMIN_PASSWORD: 'seed-secret',
+			FEEDBACK_CHAT_URL: 'https://feedback.example',
+			FEEDBACK_SECRET: 'feedback-secret'
 		});
 		expect(summary).toBe(
-			'database db.example/nextep · url https://nextep.example · sign-in password, google · admin emails 2 · seed on'
+			'database db.example/nextep · url https://nextep.example · sign-in password, google · admin emails 2 · seed on · feedback chat on'
 		);
 		expect(summary).not.toMatch(/secret/);
 	});
@@ -48,5 +50,12 @@ describe('checkConfig', () => {
 			'SEED_ON_START set without SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD'
 		);
 		expect(checkConfig(base)).toContain('seed off');
+	});
+
+	it('needs both feedback chat variables', () => {
+		expect(() => checkConfig({ ...base, FEEDBACK_SECRET: 's' })).toThrow(
+			'FEEDBACK_SECRET set without FEEDBACK_CHAT_URL'
+		);
+		expect(checkConfig(base)).toContain('feedback chat off');
 	});
 });

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import FeedbackChat from '$lib/components/FeedbackChat.svelte';
 
 	let { children, data } = $props();
 </script>
@@ -20,6 +21,7 @@
 			{#if data.user}
 				<a href="/dashboard">Hallinta</a>
 				{#if data.user.isAdmin}<a href="/admin">Ylläpito</a>{/if}
+				<a href="/account">Oma tili</a>
 				<form method="POST" action="/logout">
 					<button class="link-button">Kirjaudu ulos</button>
 				</form>
@@ -46,6 +48,10 @@
 		</nav>
 	</div>
 </footer>
+
+{#if data.feedbackEndpoint}
+	<FeedbackChat endpoint={data.feedbackEndpoint} userName={data.user?.name} />
+{/if}
 
 <style>
 	.site-header {

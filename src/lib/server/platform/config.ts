@@ -44,6 +44,16 @@ export const config = {
 	/** The admin login SEED_ON_START creates. Required with it: the demo password is public. */
 	get seedAdmin() {
 		return { email: required('SEED_ADMIN_EMAIL'), password: required('SEED_ADMIN_PASSWORD') };
+	},
+	/**
+	 * Hosted feedback chat for signed-in users, proxied through /api/feedback. Off unless both
+	 * FEEDBACK_CHAT_URL (e.g. https://feedback-chat.cloudgood.fi) and FEEDBACK_SECRET (the
+	 * "nextep" project's secret on that server) are set.
+	 */
+	get feedbackChat() {
+		const url = process.env.FEEDBACK_CHAT_URL?.replace(/\/+$/, '');
+		const secret = process.env.FEEDBACK_SECRET;
+		return url && secret ? { url, secret } : null;
 	}
 };
 
@@ -67,7 +77,8 @@ function databaseName(value: string): string {
 const GROUPS = [
 	['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
 	['MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET'],
-	['SEED_ADMIN_EMAIL', 'SEED_ADMIN_PASSWORD']
+	['SEED_ADMIN_EMAIL', 'SEED_ADMIN_PASSWORD'],
+	['FEEDBACK_CHAT_URL', 'FEEDBACK_SECRET']
 ];
 
 /**
@@ -117,6 +128,7 @@ export function checkConfig(env: NodeJS.ProcessEnv = process.env): string {
 		`url ${env.ORIGIN}`,
 		`sign-in ${signIn.join(', ')}`,
 		`admin emails ${admins}`,
-		`seed ${seed ? 'on' : 'off'}`
+		`seed ${seed ? 'on' : 'off'}`,
+		`feedback chat ${env.FEEDBACK_CHAT_URL && env.FEEDBACK_SECRET ? 'on' : 'off'}`
 	].join(' · ');
 }

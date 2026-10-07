@@ -4,6 +4,8 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+# The feedback chat widget is a local tarball (a dev dependency: only the build needs it).
+COPY vendor ./vendor
 RUN npm ci
 
 # Full source + dev dependencies. Also used by the `seed` compose service.

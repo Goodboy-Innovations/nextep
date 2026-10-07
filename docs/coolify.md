@@ -25,8 +25,8 @@ the deployment's own domain. When the built server starts (`src/hooks.server.ts`
 1. **It checks its variables** (`checkConfig()` in `src/lib/server/platform/config.ts`) and stops with
    one message naming every problem: `DATABASE_URL` missing or not a `postgres://` URL (a preview's
    `none` that devpg didn't replace), `ORIGIN` missing, half-set pairs (`GOOGLE_CLIENT_ID` without its
-   secret), `SEED_ON_START` without `SEED_ADMIN_*`. Otherwise it logs a summary without secrets:
-   `Config: database <host>/<db> · url <ORIGIN> · sign-in password, google · admin emails 1 · seed off`.
+   secret), `SEED_ON_START` without `SEED_ADMIN_*`, `FEEDBACK_SECRET` without `FEEDBACK_CHAT_URL`. Otherwise it logs a summary without secrets:
+   `Config: database <host>/<db> · url <ORIGIN> · sign-in password, google · admin emails 1 · seed off · feedback chat off`.
 2. **It applies pending migrations** from `drizzle/` and stops if one fails, so a broken migration
    fails the preview, not production.
 3. **With `SEED_ON_START=1`** (staging), a database without users gets the demo data, with an admin
@@ -66,12 +66,13 @@ The last one prints the key once: put it straight into the preview variables as 
    release tags. Domain of the `app` service: `https://nextep.cloudgood.fi:3000`.
 3. **Variables** (in Coolify, not in the compose file):
 
-   | Variable                                         | Value                                                                                          |
-   | ------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-   | `DATABASE_URL`                                   | The database's internal URL                                                                    |
-   | `ADMIN_EMAILS`                                   | Your own address: how the first admin gets in (sign in with Google or Microsoft)               |
-   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`       | With `https://nextep.cloudgood.fi/login/google/callback` registered at Google                  |
-   | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | With `…/login/microsoft/callback` registered in Entra. `MICROSOFT_TENANT` defaults to `common` |
+   | Variable                                         | Value                                                                                                                         |
+   | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+   | `DATABASE_URL`                                   | The database's internal URL                                                                                                   |
+   | `ADMIN_EMAILS`                                   | Your own address: how the first admin gets in (sign in with Google or Microsoft)                                              |
+   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`       | With `https://nextep.cloudgood.fi/login/google/callback` registered at Google                                                 |
+   | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | With `…/login/microsoft/callback` registered in Entra. `MICROSOFT_TENANT` defaults to `common`                                |
+   | `FEEDBACK_CHAT_URL`, `FEEDBACK_SECRET`           | Optional: the feedback chat for signed-in users. `https://feedback-chat.cloudgood.fi` and the "nextep" project's secret there |
 
    No `DEVPG_*`, no `SEED_*`.
 
@@ -85,6 +86,7 @@ Same repository and compose file, on `main`, domain `https://staging.nextep.clou
 | `SEED_ON_START`                           | `1`                                                               |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | The staging admin's login; the password from the password manager |
 | `GOOGLE_*`, `MICROSOFT_*`, `ADMIN_EMAILS` | Optional, with the staging domain's callback URLs registered      |
+| `FEEDBACK_CHAT_URL`, `FEEDBACK_SECRET`    | Optional, as in production                                        |
 
 Staging deploys only `main`: if it ran an open PR's migration, other previews copied from it would
 skip their own older migrations (see the kit's environments doc).
