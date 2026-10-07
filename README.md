@@ -9,7 +9,7 @@ Find spiritual events near you. Nextep ranks upcoming events by time, distance, 
 Requires Docker Desktop (or Docker Engine with the compose plugin).
 
 ```sh
-cp .env.example .env             # optional: add Google/Microsoft sign-in, see below
+cp .env.example .env
 docker compose up --build -d     # database, migrations, app
 docker compose run --rm seed     # demo data (once)
 ```
@@ -25,21 +25,14 @@ Stop with `docker compose down` (add `-v` to delete the database).
 
 ## Sign-in
 
-Organizers sign in with **email + password** or with **Google** / **Microsoft** (personal Outlook and work/school accounts). More OAuth providers can be added: see `src/lib/server/modules/identity/README.md`.
+Organizers sign in with their church's **ChurchTools** (they type the subdomain, e.g. `utopia` for `utopia.church.tools`) or with **email + password**. Details: `src/lib/server/modules/churchtools/README.md`.
 
-Access is invite-only: an admin adds a person under Ylläpito → Käyttäjät, optionally with an initial password (admins can also set a new one there). The person's first sign-in with a provider that confirms that email links the account.
+- **A church registers itself** on `/register`: its ChurchTools admin adds an OAuth client named `Nextep` in ChurchTools (Järjestelmäasetukset → Yleinen → Kirjaudu sisään → "Kirjaudu kolmannen osapuolen järjestelmään ChurchTools-käyttäjätilillä"), copies the client secret ChurchTools shows once, sets the client's redirect URI to `{ORIGIN}/login/churchtools/callback`, then enters the subdomain, client ID and secret on `/register` and signs in. If ChurchTools later doesn't accept the client (e.g. it was deleted), sign-in treats the church as not registered; registering again replaces the client and keeps the organization. The organization starts **in review**; platform admins verify it under Ylläpito, and only then are its events public.
+- **Other members** of that church sign in with ChurchTools and wait until the organization's owner lets them in.
+- **ChurchTools emails are not trusted**: they never link to an existing account. Someone who already has a password account signs in with it and connects ChurchTools on Oma tili.
+- **Platform admins**: `ADMIN_EMAILS` (comma-separated) makes those addresses admins when they sign in with email + password. On a fresh installation, create the first one with `npm run create-admin -- you@example.fi "Your Name"` (prints a password).
 
-### Setting up Google / Microsoft (optional)
-
-1. Create an OAuth client:
-   - Google: Google Cloud Console → APIs & Services → Credentials → OAuth client ID (Web application).
-   - Microsoft: Microsoft Entra admin center → App registrations → New registration, with "Accounts in any organizational directory and personal Microsoft accounts". Create a client secret.
-2. Register the redirect URIs:
-   - `http://localhost:5173/login/google/callback` (npm run dev), `http://localhost:3000/login/google/callback` (Docker)
-   - the same with `/login/microsoft/callback`
-3. Put the client ids and secrets in `.env`. Providers without credentials are hidden from the login page.
-
-`ADMIN_EMAILS` (comma-separated) lets those addresses sign in with Google/Microsoft without an invite and become platform admins — handy for a fresh installation without the demo data.
+Each church's client ID and secret are stored per instance in the database, so ChurchTools needs no environment variables. For local testing use the redirect URI `http://localhost:5173/login/churchtools/callback`.
 
 ## Development
 
@@ -54,15 +47,16 @@ npm run db:seed
 npm run dev                      # http://localhost:5173
 ```
 
-| Command               | What it does                                    |
-| --------------------- | ----------------------------------------------- |
-| `npm run dev`         | Dev server                                      |
-| `npm test`            | Unit tests (Vitest)                             |
-| `npm run check`       | Type check (svelte-check)                       |
-| `npm run lint`        | Prettier + ESLint                               |
-| `npm run db:generate` | Create a migration after changing a `schema.ts` |
-| `npm run db:migrate`  | Apply migrations                                |
-| `npm run db:seed`     | Demo data (`-- --reset` wipes everything first) |
+| Command                | What it does                                    |
+| ---------------------- | ----------------------------------------------- |
+| `npm run dev`          | Dev server                                      |
+| `npm test`             | Unit tests (Vitest)                             |
+| `npm run check`        | Type check (svelte-check)                       |
+| `npm run lint`         | Prettier + ESLint                               |
+| `npm run db:generate`  | Create a migration after changing a `schema.ts` |
+| `npm run db:migrate`   | Apply migrations                                |
+| `npm run db:seed`      | Demo data (`-- --reset` wipes everything first) |
+| `npm run create-admin` | Platform admin with a password (`-- <email>`)   |
 
 **Migrations:** at most one per PR. If `main` gained a migration since you branched, rebase and regenerate yours.
 
@@ -80,7 +74,8 @@ doesn't start if either fails. It needs `ORIGIN`, the site's address.
 ```
 src/lib/server/platform/     shared kernel: config, db, time, slugs, cities
 src/lib/server/modules/      one folder per domain, each with README.md, index.ts, schema.ts
-  identity/                  users, password + OAuth sign-in (Google, Microsoft), sessions
+  identity/                  users, password sign-in, external accounts, sessions
+  churchtools/               ChurchTools sign-in, church registration, profile import
   organizations/             organizations, members, roles, status
   taxonomy/                  categories, age groups, languages, denominations
   events/                    events in the iCalendar model, recurrence, occurrences

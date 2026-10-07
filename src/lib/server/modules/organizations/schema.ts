@@ -36,6 +36,8 @@ export const organizations = pgTable('organizations', {
 	 * (0 = none). Set by admins.
 	 */
 	frontPageLimit: integer('front_page_limit').notNull().default(5),
+	/** Who registered the organization, when it registered itself (shown in review). */
+	registeredBy: uuid('registered_by').references(() => users.id, { onDelete: 'set null' }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
@@ -50,6 +52,21 @@ export const memberships = pgTable(
 			.notNull()
 			.references(() => organizations.id, { onDelete: 'cascade' }),
 		role: text('role', { enum: ORG_ROLES }).notNull().default('editor')
+	},
+	(t) => [primaryKey({ columns: [t.userId, t.orgId] })]
+);
+
+/** People waiting to be let in by the organization's owner or admins. */
+export const membershipRequests = pgTable(
+	'membership_requests',
+	{
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		orgId: uuid('org_id')
+			.notNull()
+			.references(() => organizations.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
 	(t) => [primaryKey({ columns: [t.userId, t.orgId] })]
 );

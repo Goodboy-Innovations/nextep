@@ -1,24 +1,26 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { authenticate, listProviders } from '$lib/server/modules/identity';
+import { authenticate } from '$lib/server/modules/identity';
+import { instanceSubdomain } from '$lib/server/modules/churchtools';
+import { CHURCHTOOLS_ERRORS, rememberedInstance } from '$lib/server/pages/churchtools';
 import { safeNext, startSession } from '$lib/server/session';
 import type { Actions, PageServerLoad } from './$types';
 
 const ERRORS: Record<string, string> = {
-	not_invited:
-		'Tälle tilille ei ole kutsua. Nextep on alpha-vaiheessa: järjestäjät kutsutaan sähköpostiosoitteella.',
-	email_unverified:
-		'Palveluntarjoaja ei vahvistanut sähköpostiosoitettasi. Kokeile toista kirjautumistapaa tai pyydä ylläpitoa.',
+	...CHURCHTOOLS_ERRORS,
 	failed: 'Kirjautuminen epäonnistui. Yritä uudelleen.'
 };
 
-export const load: PageServerLoad = ({ locals, url }) => {
+export const load: PageServerLoad = ({ locals, url, cookies }) => {
 	const next = url.searchParams.get('next');
 	if (locals.user) redirect(303, safeNext(next));
 	const error = url.searchParams.get('error');
 	return {
-		providers: listProviders().map((p) => ({ id: p.id, label: p.label })),
+		instance:
+			instanceSubdomain(url.searchParams.get('instance') ?? '') || rememberedInstance(cookies),
 		next: next ? safeNext(next) : null,
-		error: error ? (ERRORS[error] ?? ERRORS.failed) : null
+		error: error ? (ERRORS[error] ?? ERRORS.failed) : null,
+		/** Offer registering the church instead. */
+		unknownInstance: error === 'unknown_instance'
 	};
 };
 

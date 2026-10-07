@@ -6,6 +6,7 @@
 	<strong>Ylläpito</strong>
 	<a href="/admin">Organisaatiot</a>
 	<a href="/admin/users">Käyttäjät</a>
+	<a href="/admin/churchtools">ChurchTools</a>
 </nav>
 
 {@render children()}

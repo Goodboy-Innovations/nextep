@@ -1,57 +1,45 @@
-// Who is signing in? Pure decision logic, kept separate so the security rules are unit-tested.
+// Who is signing in with an external account (e.g. ChurchTools)? Pure decision logic, kept separate
+// so the security rules are unit-tested.
 //
-// Rules:
-// 1. A provider account that is already linked always identifies its user.
-// 2. Otherwise the account is linked to an invited user (created by an admin) with the same
-//    email — but only when the provider guarantees the email (`emailTrusted`).
-// 3. Emails listed in ADMIN_EMAILS may sign in without an invite and become platform admins
-//    (bootstraps a fresh installation). Same email-trust rule applies.
-// 4. Everyone else is rejected: seekers never need an account.
+// Anyone can run an external system (e.g. a ChurchTools instance) and put any email on a person
+// there, so external emails are never trusted for linking. Rules:
+// 1. An external account that is already linked always identifies its user.
+// 2. Someone signed in to Nextep links the account to themselves ("connect").
+// 3. Otherwise a new user is created — unless the email already belongs to a user. Then that
+//    person must sign in to their account (password) and connect the external account there.
+// Platform admins are never granted through external accounts: ADMIN_EMAILS applies to
+// password sign-in only.
 
-import type { ExternalIdentity } from './providers/types';
+import type { ExternalIdentity } from './types';
 
-export interface KnownUser {
-	id: string;
-	isAdmin: boolean;
-}
+export type ExternalSignInDecision =
+	| { kind: 'existing'; userId: string }
+	| { kind: 'link'; userId: string }
+	| { kind: 'create'; email: string }
+	| { kind: 'reject'; reason: SignInRejection };
 
-export type SignInDecision =
-	| { kind: 'existing'; userId: string; promoteToAdmin: boolean }
-	| { kind: 'link'; userId: string; promoteToAdmin: boolean }
-	| { kind: 'create-admin'; email: string }
-	| { kind: 'reject'; reason: 'not_invited' | 'email_unverified' };
+export type SignInRejection = 'linked_elsewhere' | 'email_in_use' | 'no_email';
 
-export function decideSignIn(input: {
+export function decideExternalSignIn(input: {
 	identity: ExternalIdentity;
 	/** User already linked to (provider, subject), if any. */
-	linkedUser: KnownUser | null;
-	/** User whose email equals identity.email, if any. */
-	userWithEmail: KnownUser | null;
-	adminEmails: ReadonlySet<string>;
-}): SignInDecision {
-	const { identity, linkedUser, userWithEmail, adminEmails } = input;
-	const trustedEmail = identity.emailTrusted && identity.email ? identity.email : null;
-	const isAdminEmail = trustedEmail !== null && adminEmails.has(trustedEmail);
-
-	if (linkedUser) {
-		return {
-			kind: 'existing',
-			userId: linkedUser.id,
-			promoteToAdmin: isAdminEmail && !linkedUser.isAdmin
-		};
+	linkedUserId: string | null;
+	/** The user signed in to Nextep right now, if any. */
+	currentUserId: string | null;
+	/** Whether some user already has identity.email. */
+	emailTaken: boolean;
+}): ExternalSignInDecision {
+	const { identity, linkedUserId, currentUserId, emailTaken } = input;
+	if (currentUserId) {
+		if (!linkedUserId) return { kind: 'link', userId: currentUserId };
+		return linkedUserId === currentUserId
+			? { kind: 'existing', userId: currentUserId }
+			: { kind: 'reject', reason: 'linked_elsewhere' };
 	}
-	if (!trustedEmail) {
-		return { kind: 'reject', reason: identity.email ? 'email_unverified' : 'not_invited' };
-	}
-	if (userWithEmail) {
-		return {
-			kind: 'link',
-			userId: userWithEmail.id,
-			promoteToAdmin: isAdminEmail && !userWithEmail.isAdmin
-		};
-	}
-	if (isAdminEmail) return { kind: 'create-admin', email: trustedEmail };
-	return { kind: 'reject', reason: 'not_invited' };
+	if (linkedUserId) return { kind: 'existing', userId: linkedUserId };
+	if (!identity.email) return { kind: 'reject', reason: 'no_email' };
+	if (emailTaken) return { kind: 'reject', reason: 'email_in_use' };
+	return { kind: 'create', email: identity.email };
 }
 
 export function parseAdminEmails(value: string | undefined): Set<string> {

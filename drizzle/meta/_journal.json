@@ -43,6 +43,13 @@
       "when": 1790710481995,
       "tag": "0005_front_page_quality",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791378925571,
+      "tag": "0006_churchtools",
+      "breakpoints": true
     }
   ]
 }

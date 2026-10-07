@@ -11,25 +11,23 @@
 
 <div class="admin-grid">
 	<form method="POST" action="?/create" class="card">
-		<h2>Kutsu käyttäjä</h2>
+		<h2>Luo käyttäjä</h2>
 		<p class="hint">
-			Käyttäjä voi kirjautua Googlella tai Microsoftilla tällä sähköpostiosoitteella, ja
-			salasanalla, jos asetat sellaisen.
+			Seurakuntien käyttäjät luovat tilinsä itse ChurchToolsilla. Tällä luodaan salasanatili, johon
+			voi myöhemmin liittää ChurchToolsin Oma tili -sivulla.
 		</p>
 		<div class="field"><label for="name">Nimi</label><input id="name" name="name" required /></div>
 		<div class="field">
 			<label for="email">Sähköposti</label><input id="email" name="email" type="email" required />
 		</div>
 		<div class="field">
-			<label for="password"
-				>Alkusalasana <span class="hint">— valinnainen, vähintään 10 merkkiä</span></label
-			>
-			<input id="password" name="password" type="text" minlength="10" autocomplete="off" />
+			<label for="password">Alkusalasana <span class="hint">— vähintään 10 merkkiä</span></label>
+			<input id="password" name="password" type="text" minlength="10" required autocomplete="off" />
 		</div>
 		<div class="field checks">
 			<label><input type="checkbox" name="isAdmin" /> Alustan ylläpitäjä</label>
 		</div>
-		<button type="submit">Kutsu</button>
+		<button type="submit">Luo</button>
 	</form>
 
 	<form method="POST" action="?/password" class="card">
@@ -88,11 +86,7 @@
 				<tr>
 					<td>{u.name}</td>
 					<td>{u.email}</td>
-					<td
-						>{u.providers.length
-							? u.providers.map((p) => (p === 'password' ? 'salasana' : p)).join(', ')
-							: 'Ei vielä kirjautunut'}</td
-					>
+					<td>{u.providers.length ? u.providers.join(', ') : 'Ei vielä kirjautunut'}</td>
 					<td>{u.isAdmin ? 'Ylläpitäjä' : ''}</td>
 				</tr>
 			{/each}

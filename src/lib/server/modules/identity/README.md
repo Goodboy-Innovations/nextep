@@ -1,36 +1,21 @@
 # identity
 
-Users, sign-in and sessions. Two ways to sign in:
+Users, sign-in and sessions. It knows no external system by name: the churchtools module plugs in through `signInWithExternalAccount` and `listLinkedAccounts`.
 
-- **Email + password** — for users an admin gave a password (`users.password_hash`, scrypt from `node:crypto`, min. 10 characters). Unknown emails still run a hash so response time doesn't reveal which emails exist.
-- **OAuth** — Google and Microsoft, more pluggable (below).
+- **Email + password** — for accounts an admin created (`users.password_hash`, scrypt from `node:crypto`, min. 10 characters). Unknown emails still run a hash so response time doesn't reveal which emails exist. Emails in `ADMIN_EMAILS` become platform admins when they sign in this way — never through an external account.
+- **External accounts** (`oauth_accounts`) — linked by another module, today only ChurchTools (`modules/churchtools`).
 
-A user can have both.
+A user can have a password and several external accounts.
 
-- `providers/` — one file per OAuth provider (Google, Microsoft), built on [arctic](https://arcticjs.dev). Authorization code flow with PKCE and `state`.
-- `resolve.ts` — who is signing in (pure, unit-tested in `resolve.test.ts`):
-  1. an already linked provider account → its user;
-  2. otherwise link to an **invited** user with the same email — only if the provider guarantees the email;
-  3. emails in `ADMIN_EMAILS` may sign in without an invite and become platform admins (bootstrap);
-  4. everyone else is rejected. Seekers never need accounts.
+- `resolve.ts` — who is signing in with an external account (pure, unit-tested in `resolve.test.ts`).
+- Sessions: random token in an HTTP-only cookie (`nextep_session`); only its SHA-256 is stored. 30 days, sliding. `npm run create-admin -- <email>` creates the first platform admin of a fresh installation.
 
-  Password users are matched by email the same way, so an invited user can later also sign in with Google or Microsoft.
+## External accounts: emails are not trusted
 
-- Sessions: random token in an HTTP-only cookie (`nextep_session`); only its SHA-256 is stored. 30 days, sliding.
+`signInWithExternalAccount(provider, identity, currentUserId)` is how another module signs someone in with an external system. The module chooses the `provider` id (`oauth_accounts.provider`, e.g. `churchtools:<host>`); identity never interprets it. Anyone can run such a system and put any address on a person, so an external email never links to an existing account and never grants admin (`resolve.ts`):
 
-## Email trust
+1. An already linked external account → its user.
+2. Someone signed in to Nextep → linked to them ("connect" on `/account`).
+3. Otherwise a new user — unless the email is already taken. Then the person must sign in to that account with their password and connect the external account there.
 
-Linking by email is only safe when the provider has verified the address.
-
-- **Google:** `email_verified === true`.
-- **Microsoft:** personal accounts (tenant `9188040d-6c67-4c5b-b112-36a304b66dad`) are trusted. In work/school tenants the `email` claim is set by the tenant and not verified by Microsoft ("nOAuth"), so it is trusted only with the optional `xms_edov` claim. To allow church staff with Microsoft 365 accounts to be linked by email, enable `xms_edov` in the app registration (Token configuration → optional claims). `preferred_username` is never used.
-
-## Adding a provider
-
-1. Create `providers/<id>.ts` exporting a `ProviderFactory` (copy `google.ts`). Arctic supports 60+ providers; for anything OIDC-compatible, decode the ID token.
-2. Map its claims to `ExternalIdentity`, and set `emailTrusted` only if the provider guarantees the email. Add a unit test for that mapping.
-3. Add it to `FACTORIES` in `providers/index.ts`.
-4. Add `<ID>_CLIENT_ID` / `<ID>_CLIENT_SECRET` to `.env.example`, `compose.yaml` and the README.
-5. Register the redirect URI `{ORIGIN}/login/<id>/callback` at the provider.
-
-The `id` is stored in `oauth_accounts.provider` — never rename it once in use.
+The email of a new user must still be unique, so step 3 reveals that an address has an account. That is the same as any sign-up form.

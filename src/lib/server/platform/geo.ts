@@ -38,6 +38,13 @@ export function findCity(name: string | null | undefined): City | undefined {
 	return CITIES.find((c) => c.name.toLowerCase() === needle);
 }
 
+/** The listed city closest to a point (good enough at Finnish distances). */
+export function nearestCity(lat: number, lng: number): City {
+	const distance = (c: City) =>
+		(c.lat - lat) ** 2 + ((c.lng - lng) * Math.cos((lat * Math.PI) / 180)) ** 2;
+	return CITIES.reduce((best, c) => (distance(c) < distance(best) ? c : best));
+}
+
 /** Rounds coordinates to ~1 km so seeker locations are never stored precisely. */
 export function coarse(value: number): number {
 	return Math.round(value * 100) / 100;

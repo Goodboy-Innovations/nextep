@@ -8,7 +8,7 @@ Valmiina ja testattuna upotettua Postgresia (PGlite + PostGIS) vasten:
 
 - SvelteKit (SSR) + PostgreSQL/PostGIS + Drizzle. Moduulit `src/lib/server/modules/*` (identity, organizations, taxonomy, events, discovery, featuring, media, calendar, seo), jokaisella README.
 - Tapahtumat iCalendar-mallissa (RRULE, EXDATE, TZID), DST-turvallinen toisto, ICS-syötteet.
-- Kirjautuminen: sähköposti + salasana **ja** OAuth (Google, Microsoft). Kutsupohjainen. `ADMIN_EMAILS` bootstrap.
+- Kirjautuminen: sähköposti + salasana **ja** ChurchTools-OAuth (seurakunnan oma instanssi). Seurakunta rekisteröityy itse (`/register`) → organisaatio `in_review` → ylläpito vahvistaa. ChurchToolsin sähköposteihin ei luoteta: ei linkitystä sähköpostilla, liittäminen Oma tili -sivulla. `ADMIN_EMAILS` vain salasanakirjautumisessa, `npm run create-admin` uudelle asennukselle. Kutsupohjainen. `ADMIN_EMAILS` bootstrap.
 - **Etusivu ilman manuaalista nostoa** (2026-09-29): tapahtuma pääsee etusivulle automaattisesti, jos sillä on kuva ja ≥200 merkin kuvaus. Organisaatiolta enintään `front_page_limit` (oletus 5, admin 0–10) tapahtumaa samalta viikolta; mitkä, ratkaistaan kävijäkohtaisesti rankingilla (`row_number() over (partition by org …)` `discovery/search.ts`:ssä). `event_features`-taulu ja Nosta-painikkeet poistettu (migraatio 0005). Hallinnassa näkyy tapahtumakohtaisesti, mitä etusivulta puuttuu.
 - Kuvat (JPEG/PNG/WebP, max 3 Mt) Postgresissa `bytea`, pienennys selaimessa.
 - Vaalea teema. 38 yksikkötestiä, svelte-check ja lint puhtaina.

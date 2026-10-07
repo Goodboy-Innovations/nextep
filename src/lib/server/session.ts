@@ -19,7 +19,10 @@ export async function startSession(cookies: Cookies, userId: string) {
 export const safeNext = (next: string | null | undefined) =>
 	next && /^\/(?![/\\])/.test(next) ? next : '/dashboard';
 
-/** Short-lived cookies that carry OAuth state across the round trip to the provider. */
+/**
+ * Short-lived cookies that carry OAuth state across the round trip to the provider. A provider
+ * adds its own with the same options (see pages/churchtools.ts).
+ */
 export const OAUTH_COOKIES = {
 	state: 'nextep_oauth_state',
 	verifier: 'nextep_oauth_verifier',

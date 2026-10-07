@@ -1,22 +1,46 @@
 <script lang="ts">
 	import { ROLE_LABELS } from '$lib/format';
+	import ChurchToolsAutofill from '$lib/components/churchtools/ChurchToolsAutofill.svelte';
 
 	let { data, form } = $props();
 	const org = $derived(data.org);
 	const canEdit = $derived(data.role === 'admin' || data.role === 'owner');
+	/** Values fetched from ChurchTools override the saved ones until the form is saved. */
+	const shown = $derived.by(() => {
+		const prefill = form && 'prefill' in form ? form.prefill : null;
+		return {
+			name: prefill?.name ?? org.name,
+			streetAddress: prefill?.streetAddress ?? org.streetAddress,
+			postalCode: prefill?.postalCode ?? org.postalCode,
+			city: prefill?.city ?? org.city,
+			lat: prefill?.lat ?? org.lat,
+			lng: prefill?.lng ?? org.lng,
+			prefilled: !!prefill
+		};
+	});
 </script>
 
 <svelte:head><title>Profiili — {org.name}</title></svelte:head>
 
+{#if data.registered && !form}
+	<p class="notice">
+		Seurakunta on rekisteröity ja odottaa tarkistusta. Nimi ja osoite haettiin ChurchToolsista —
+		tarkista ne ja täydennä profiili. Tapahtumat tulevat julkisiksi, kun seurakunta on vahvistettu.
+	</p>
+{/if}
 {#if form?.saved}<p class="notice">Tallennettu.</p>{/if}
+{#if shown.prefilled}
+	<p class="notice">Tiedot haettu ChurchToolsista. Tarkista ne ja tallenna.</p>
+{/if}
 {#if form?.error}<p class="notice warn">{form.error}</p>{/if}
 
 <div class="profile-layout">
-	<form method="POST" class="card">
+	<form method="POST" action="?/save" class="card">
+		{#if canEdit && data.churchtoolsHost}<ChurchToolsAutofill host={data.churchtoolsHost} />{/if}
 		<fieldset disabled={!canEdit}>
 			<div class="field">
 				<label for="name">Nimi</label>
-				<input id="name" name="name" required value={org.name} />
+				<input id="name" name="name" required value={shown.name} />
 			</div>
 			<div class="field">
 				<label for="description">Kuvaus</label>
@@ -45,16 +69,16 @@
 			<div class="row">
 				<div class="field">
 					<label for="streetAddress">Katuosoite</label>
-					<input id="streetAddress" name="streetAddress" value={org.streetAddress ?? ''} />
+					<input id="streetAddress" name="streetAddress" value={shown.streetAddress ?? ''} />
 				</div>
 				<div class="field">
 					<label for="postalCode">Postinumero</label>
-					<input id="postalCode" name="postalCode" value={org.postalCode ?? ''} />
+					<input id="postalCode" name="postalCode" value={shown.postalCode ?? ''} />
 				</div>
 				<div class="field">
 					<label for="city">Kaupunki</label>
 					<select id="city" name="city">
-						{#each data.cities as city (city)}<option selected={org.city === city}>{city}</option
+						{#each data.cities as city (city)}<option selected={shown.city === city}>{city}</option
 							>{/each}
 					</select>
 				</div>
@@ -65,11 +89,11 @@
 						>Leveysaste <span class="hint">— tyhjennä, niin käytetään kaupungin keskustaa</span
 						></label
 					>
-					<input id="lat" name="lat" inputmode="decimal" value={org.lat} />
+					<input id="lat" name="lat" inputmode="decimal" value={shown.lat} />
 				</div>
 				<div class="field">
 					<label for="lng">Pituusaste <span class="hint">— valinnainen</span></label>
-					<input id="lng" name="lng" inputmode="decimal" value={org.lng} />
+					<input id="lng" name="lng" inputmode="decimal" value={shown.lng} />
 				</div>
 			</div>
 			{#if canEdit}<button type="submit">Tallenna</button>{/if}
@@ -85,7 +109,32 @@
 				</li>
 			{/each}
 		</ul>
-		<p class="hint">Jäsenten kutsuminen tulee myöhemmin. Alpha-vaiheessa ylläpito lisää jäsenet.</p>
+		{#if data.requests.length}
+			<h3>Odottavat pyynnöt</h3>
+			<ul class="members">
+				{#each data.requests as r (r.userId)}
+					<li>
+						<strong>{r.name}</strong><br /><span class="hint">{r.email}</span>
+						<form method="POST" action="?/approve" class="answer">
+							<input type="hidden" name="userId" value={r.userId} />
+							<select name="role" aria-label="Rooli: {r.name}">
+								<option value="editor">{ROLE_LABELS.editor}</option>
+								<option value="admin">{ROLE_LABELS.admin}</option>
+							</select>
+							<button class="small">Hyväksy</button>
+							<button formaction="?/decline" class="secondary small">Hylkää</button>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+		<p class="hint">
+			{#if data.churchtoolsHost}
+				Seurakuntasi jäsenet voivat pyytää pääsyä kirjautumalla ChurchToolsilla ({data.churchtoolsHost}).
+			{:else}
+				Alpha-vaiheessa ylläpito lisää jäsenet.
+			{/if}
+		</p>
 	</aside>
 </div>
 
@@ -107,6 +156,19 @@
 	}
 	.members li {
 		margin-bottom: 8px;
+	}
+	.answer {
+		display: flex;
+		gap: 6px;
+		margin-top: 6px;
+		flex-wrap: wrap;
+	}
+	.answer select {
+		width: auto;
+	}
+	.small {
+		padding: 4px 10px;
+		font-size: 0.85rem;
 	}
 	@media (max-width: 860px) {
 		.profile-layout {

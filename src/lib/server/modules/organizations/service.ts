@@ -1,7 +1,14 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import { db, findCity, uniqueSlug } from '$lib/server/platform';
 import { users } from '../identity/schema';
-import { ORG_ROLES, memberships, organizations, type OrgRole, type OrgStatus } from './schema';
+import {
+	ORG_ROLES,
+	membershipRequests,
+	memberships,
+	organizations,
+	type OrgRole,
+	type OrgStatus
+} from './schema';
 
 export type Organization = typeof organizations.$inferSelect;
 
@@ -28,7 +35,10 @@ function resolveLocation(input: OrgProfileInput) {
 }
 
 export async function createOrganization(
-	input: OrgProfileInput & { status?: OrgStatus }
+	input: OrgProfileInput & {
+		status?: OrgStatus;
+		registeredBy?: string | null;
+	}
 ): Promise<Organization> {
 	const slug = await uniqueSlug(input.name, async (s) => !!(await getOrganizationBySlug(s)));
 	const [org] = await db
@@ -58,6 +68,11 @@ export async function setFrontPageLimit(id: string, limit: number): Promise<void
 		.update(organizations)
 		.set({ frontPageLimit: limit, updatedAt: new Date() })
 		.where(eq(organizations.id, id));
+}
+
+export async function getOrganizationById(id: string): Promise<Organization | null> {
+	const [org] = await db.select().from(organizations).where(eq(organizations.id, id));
+	return org ?? null;
 }
 
 export async function getOrganizationBySlug(slug: string): Promise<Organization | null> {
@@ -112,6 +127,9 @@ export async function addMember(orgId: string, userId: string, role: OrgRole): P
 		.insert(memberships)
 		.values({ orgId, userId, role })
 		.onConflictDoUpdate({ target: [memberships.userId, memberships.orgId], set: { role } });
+	await db
+		.delete(membershipRequests)
+		.where(and(eq(membershipRequests.orgId, orgId), eq(membershipRequests.userId, userId)));
 }
 
 export async function listMembers(orgId: string) {
@@ -129,4 +147,50 @@ export async function countOrganizationsByStatus(): Promise<Record<string, numbe
 		.from(organizations)
 		.groupBy(organizations.status);
 	return Object.fromEntries(rows.map((r) => [r.status, r.count]));
+}
+
+/** Asks to join. Does nothing if the user is already a member or already asked. */
+export async function requestMembership(orgId: string, userId: string): Promise<void> {
+	if (await getMemberRole(userId, orgId)) return;
+	await db.insert(membershipRequests).values({ orgId, userId }).onConflictDoNothing();
+}
+
+export async function listMembershipRequests(orgId: string) {
+	return db
+		.select({
+			userId: users.id,
+			email: users.email,
+			name: users.name,
+			createdAt: membershipRequests.createdAt
+		})
+		.from(membershipRequests)
+		.innerJoin(users, eq(users.id, membershipRequests.userId))
+		.where(eq(membershipRequests.orgId, orgId))
+		.orderBy(asc(membershipRequests.createdAt));
+}
+
+/** Organizations the user is waiting to join. */
+export async function listPendingOrganizationsForUser(userId: string): Promise<Organization[]> {
+	const rows = await db
+		.select({ org: organizations })
+		.from(membershipRequests)
+		.innerJoin(organizations, eq(organizations.id, membershipRequests.orgId))
+		.where(eq(membershipRequests.userId, userId))
+		.orderBy(asc(organizations.name));
+	return rows.map((r) => r.org);
+}
+
+/** Lets a requester in (role given) or turns them away (role null). False if no such request. */
+export async function answerMembershipRequest(
+	orgId: string,
+	userId: string,
+	role: OrgRole | null
+): Promise<boolean> {
+	const removed = await db
+		.delete(membershipRequests)
+		.where(and(eq(membershipRequests.orgId, orgId), eq(membershipRequests.userId, userId)))
+		.returning({ userId: membershipRequests.userId });
+	if (removed.length === 0) return false;
+	if (role) await addMember(orgId, userId, role);
+	return true;
 }

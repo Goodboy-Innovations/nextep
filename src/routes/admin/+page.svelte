@@ -31,7 +31,7 @@
 	<table>
 		<thead
 			><tr
-				><th>Nimi</th><th>Kaupunki</th><th>Tila</th><th
+				><th>Nimi</th><th>Kaupunki</th><th>Rekisteröinti</th><th>Tila</th><th
 					title="Montako tapahtumaa samalta viikolta voi olla etusivulla">Etusivulla / vko</th
 				></tr
 			></thead
@@ -41,6 +41,15 @@
 				<tr>
 					<td><a href="/dashboard/{org.slug}">{org.name}</a></td>
 					<td>{org.city}</td>
+					<td class="registration">
+						{#if org.churchtoolsHost}
+							<a href="https://{org.churchtoolsHost}" rel="noopener noreferrer" target="_blank"
+								>{org.churchtoolsHost}</a
+							><br />
+						{/if}
+						{#if org.registeredBy}{org.registeredBy}<br />{/if}
+						<span class="hint">{org.createdAt.toLocaleDateString('fi-FI')}</span>
+					</td>
 					<td>
 						<form method="POST" action="?/status" class="status">
 							<input type="hidden" name="id" value={org.id} />
@@ -83,6 +92,9 @@
 	}
 	.status select {
 		width: auto;
+	}
+	.registration {
+		font-size: 0.88rem;
 	}
 	.limit {
 		width: 72px !important;
