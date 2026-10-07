@@ -39,8 +39,21 @@ const COOKIES = {
 	/** The client being tried, with /register's details, until ChurchTools accepts it. */
 	registration: 'nextep_oauth_registration',
 	/** The last instance used, to prefill the login page. Not a secret. */
-	remembered: 'nextep_churchtools'
+	remembered: 'nextep_churchtools',
+	/**
+	 * A registration interrupted by `email_in_use`, to prefill /register after the person signed
+	 * in to their account: ChurchTools shows the client secret only once.
+	 */
+	pending: 'nextep_registration_pending'
 } as const;
+
+const pendingCookieOptions = {
+	path: '/register',
+	httpOnly: true,
+	sameSite: 'lax' as const,
+	secure: !dev,
+	maxAge: 30 * 60
+};
 
 /** The client /register tries. The church's details come from its ChurchTools. */
 export interface Registration {
@@ -49,6 +62,20 @@ export interface Registration {
 }
 
 const redirectURI = () => `${config.origin}${CHURCHTOOLS_CALLBACK_PATH}`;
+
+/** The registration this browser started before it had to sign in first, if any. */
+export function pendingRegistration(
+	cookies: Cookies
+): (Registration & { instance: string }) | null {
+	const value = cookies.get(COOKIES.pending);
+	if (!value) return null;
+	try {
+		const p = JSON.parse(value) as Registration & { instance: string };
+		return typeof p.instance === 'string' && readRegistration(value) ? p : null;
+	} catch {
+		return null;
+	}
+}
 
 /** The subdomain of the last instance this browser signed in with, or "". */
 export const rememberedInstance = (cookies: Cookies) =>
@@ -67,7 +94,7 @@ export async function startChurchToolsFlow(
 	const state = generateState();
 	const verifier = generateCodeVerifier();
 	const url = churchToolsAuthorizationURL(client, redirectURI(), state, verifier);
-	const check = await checkChurchToolsClient(client, redirectURI(), url);
+	const check = await checkChurchToolsClient(client, redirectURI(), url, !!registration);
 	if (check !== 'ok') return check;
 
 	cookies.set(OAUTH_COOKIES.state, state, oauthCookieOptions);
@@ -133,6 +160,13 @@ export async function completeChurchToolsFlow(
 	});
 	if (!result.ok) {
 		const subdomain = instanceSubdomain(host);
+		if (registration && result.reason === 'email_in_use') {
+			cookies.set(
+				COOKIES.pending,
+				JSON.stringify({ instance: subdomain, ...registration }),
+				pendingCookieOptions
+			);
+		}
 		// Sign in to the existing account first, then come back to connect or register.
 		const then = registration ? `/register?instance=${subdomain}` : `/account?connect=${subdomain}`;
 		const targets: Record<typeof result.reason, string> = {
@@ -151,6 +185,7 @@ export async function completeChurchToolsFlow(
 		secure: !dev,
 		maxAge: 365 * 24 * 60 * 60
 	});
+	if (registration) cookies.delete(COOKIES.pending, { path: pendingCookieOptions.path });
 	if (!currentUser) await startSession(cookies, result.user.id);
 	if (result.registeredOrgSlug) {
 		redirect(303, `/dashboard/${result.registeredOrgSlug}/profile?registered=1`);

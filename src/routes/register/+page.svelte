@@ -48,10 +48,21 @@
 	{#if error}<p class="notice warn">{error}</p>{/if}
 
 	<form method="POST" class="card">
+		{#if data.pending && !form}
+			<p class="notice">
+				Olet nyt kirjautunut tilillesi. Aiemmin syöttämäsi tiedot ovat tallessa: jatka
+				rekisteröintiä alla olevalla painikkeella.
+			</p>
+		{/if}
 		{#if data.signedInAs}
 			<p class="hint">
 				Olet kirjautunut tunnuksella {data.signedInAs}. ChurchTools-kirjautuminen liitetään tähän
 				tiliin, ja sinusta tulee seurakunnan omistaja.
+			</p>
+		{:else}
+			<p class="hint">
+				Onko sinulla jo Nextep-tili? <a href="/login?next=%2Fregister">Kirjaudu ensin sisään</a>,
+				niin ChurchTools liitetään siihen.
 			</p>
 		{/if}
 
@@ -89,7 +100,7 @@
 						autocomplete="off"
 						spellcheck="false"
 						required
-						value={form?.clientSecret ?? ''}
+						value={form?.clientSecret ?? data.pending?.clientSecret ?? ''}
 					/>
 				</div>
 			</li>
@@ -114,7 +125,7 @@
 						autocomplete="off"
 						spellcheck="false"
 						required
-						value={form?.clientId ?? ''}
+						value={form?.clientId ?? data.pending?.clientId ?? ''}
 					/>
 				</div>
 			</li>

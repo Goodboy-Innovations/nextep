@@ -5,7 +5,7 @@ import {
 	instanceSubdomain,
 	normalizeInstanceHost
 } from '$lib/server/modules/churchtools';
-import { startChurchToolsFlow } from '$lib/server/pages/churchtools';
+import { pendingRegistration, startChurchToolsFlow } from '$lib/server/pages/churchtools';
 import type { Actions, PageServerLoad } from './$types';
 
 const ERRORS: Record<string, string> = {
@@ -21,10 +21,13 @@ const ERRORS: Record<string, string> = {
 		'ChurchTools ei hyväksynyt kirjautumista. Tarkista osoite, asiakkaan tunnus, salaisuus ja Ohjaus-URI ja yritä uudelleen.'
 };
 
-export const load: PageServerLoad = ({ url, locals }) => {
+export const load: PageServerLoad = ({ url, locals, cookies }) => {
 	const error = url.searchParams.get('error');
+	// Back from signing in to an existing account: the client the person already entered.
+	const pending = locals.user ? pendingRegistration(cookies) : null;
 	return {
-		instance: instanceSubdomain(url.searchParams.get('instance') ?? ''),
+		instance: pending?.instance ?? instanceSubdomain(url.searchParams.get('instance') ?? ''),
+		pending: pending && { clientId: pending.clientId, clientSecret: pending.clientSecret },
 		redirectURI: `${config.origin}${CHURCHTOOLS_CALLBACK_PATH}`,
 		signedInAs: locals.user?.email ?? null,
 		error: error ? (ERRORS[error] ?? ERRORS.failed) : null

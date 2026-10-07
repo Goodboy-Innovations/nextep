@@ -68,6 +68,16 @@ describe('ChurchTools client pre-flight check', () => {
 		expect(classifyClientCheck(null, null, null)).toBe('ok');
 		expect(classifyClientCheck(instance, 503, null)).toBe('ok');
 	});
+
+	it('does not send people to setup when ChurchTools is busy', () => {
+		expect(classifyClientCheck(instance, 429, null)).toBe('ok');
+		expect(classifyClientCheck(instance, 408, null)).toBe('ok');
+	});
+
+	it('judges a stored client by its authorization page alone', () => {
+		expect(classifyClientCheck(null, 404, null)).toBe('client_missing');
+		expect(classifyClientCheck(null, 200, null)).toBe('ok');
+	});
 });
 
 describe('ChurchTools userinfo → identity', () => {

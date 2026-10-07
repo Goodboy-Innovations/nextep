@@ -176,13 +176,13 @@ export async function validateChurchToolsCallback(
 export type ClientCheck = 'ok' | 'no_instance' | 'client_missing' | 'secret_wrong';
 
 /**
- * Classifies the pre-flight responses (null = the request failed). An unknown subdomain isn't a
- * 404: church.tools redirects it to find.church.tools, so instance existence comes from
- * /api/info, which answers JSON only for a real instance. An existing instance answers 404 for
- * a client id it doesn't know and 401 for a redirect URI it doesn't accept (any 4xx is treated
- * as a setup problem). The token endpoint answers `invalid_client` to a wrong secret. Anything
- * else, including ChurchTools being unreachable, passes: the person then sees ChurchTools' own
- * page.
+ * Classifies the pre-flight responses (null = not asked, or the request failed). An unknown
+ * subdomain isn't a 404: church.tools redirects it to find.church.tools, so instance existence
+ * comes from /api/info, which answers JSON only for a real instance. An existing instance answers
+ * 404 for a client id it doesn't know and 401 for a redirect URI it doesn't accept (any 4xx but
+ * 408 and 429 is treated as a setup problem). The token endpoint answers `invalid_client` to a
+ * wrong secret. Anything else, including ChurchTools being unreachable or busy, passes: the
+ * person then sees ChurchTools' own page.
  */
 export function classifyClientCheck(
 	info: { status: number; contentType: string } | null,
@@ -190,7 +190,13 @@ export function classifyClientCheck(
 	tokenError: string | null
 ): ClientCheck {
 	if (info && !(info.status === 200 && info.contentType.includes('json'))) return 'no_instance';
-	if (authorizeStatus !== null && authorizeStatus >= 400 && authorizeStatus < 500) {
+	if (
+		authorizeStatus !== null &&
+		authorizeStatus >= 400 &&
+		authorizeStatus < 500 &&
+		authorizeStatus !== 408 &&
+		authorizeStatus !== 429
+	) {
 		return 'client_missing';
 	}
 	if (tokenError === 'invalid_client') return 'secret_wrong';
@@ -201,11 +207,17 @@ export function classifyClientCheck(
  * Checks that the instance exists, knows the client and accepts its secret before sending a
  * person there. The secret is tested by redeeming a made-up code: ChurchTools authenticates the
  * client before it looks at the code.
+ *
+ * Only `setup` (a church registering, with a client typed in by hand) runs all three requests.
+ * Signing in with a stored client asks only the authorization page, which a browser would load
+ * next anyway: anyone can start a sign-in, so it must not make Nextep send the church's secret
+ * or extra requests to its ChurchTools.
  */
 export async function checkChurchToolsClient(
 	instance: ChurchToolsClient,
 	redirectURI: string,
-	authorizationURL: URL
+	authorizationURL: URL,
+	setup: boolean
 ): Promise<ClientCheck> {
 	const request = async (url: string | URL, init: RequestInit) => {
 		try {
@@ -219,23 +231,27 @@ export async function checkChurchToolsClient(
 		}
 	};
 	const [info, authorize, token] = await Promise.all([
-		request(`https://${instance.host}/api/info`, { headers: { Accept: 'application/json' } }),
+		setup
+			? request(`https://${instance.host}/api/info`, { headers: { Accept: 'application/json' } })
+			: null,
 		// Asked like a browser: with JSON accepted, ChurchTools answers 401 "not signed in" even
 		// for a valid client. As HTML: valid client 200, unknown client 404, wrong redirect URI 401.
 		request(authorizationURL, { headers: { Accept: 'text/html' } }),
-		request(endpoint(instance.host, 'access_token'), {
-			method: 'POST',
-			headers: {
-				Accept: 'application/json',
-				Authorization: `Basic ${btoa(`${instance.clientId}:${instance.clientSecret}`)}`
-			},
-			body: new URLSearchParams({
-				grant_type: 'authorization_code',
-				code: 'nextep-preflight',
-				redirect_uri: redirectURI,
-				code_verifier: 'nextep-preflight-'.padEnd(43, '0')
-			})
-		})
+		setup
+			? request(endpoint(instance.host, 'access_token'), {
+					method: 'POST',
+					headers: {
+						Accept: 'application/json',
+						Authorization: `Basic ${btoa(`${instance.clientId}:${instance.clientSecret}`)}`
+					},
+					body: new URLSearchParams({
+						grant_type: 'authorization_code',
+						code: 'nextep-preflight',
+						redirect_uri: redirectURI,
+						code_verifier: 'nextep-preflight-'.padEnd(43, '0')
+					})
+				})
+			: null
 	]);
 	await Promise.all([info, authorize].map((r) => r?.body?.cancel()));
 	let tokenError: string | null = null;
