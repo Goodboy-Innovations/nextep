@@ -31,6 +31,6 @@ Linking by email is only safe when the provider has verified the address.
 2. Map its claims to `ExternalIdentity`, and set `emailTrusted` only if the provider guarantees the email. Add a unit test for that mapping.
 3. Add it to `FACTORIES` in `providers/index.ts`.
 4. Add `<ID>_CLIENT_ID` / `<ID>_CLIENT_SECRET` to `.env.example`, `compose.yaml` and the README.
-5. Register the redirect URI `{PUBLIC_URL}/login/<id>/callback` at the provider.
+5. Register the redirect URI `{ORIGIN}/login/<id>/callback` at the provider.
 
 The `id` is stored in `oauth_accounts.provider` — never rename it once in use.

@@ -72,8 +72,8 @@ npm run dev                      # http://localhost:5173
 staging from `main` and a preview with its own database for every pull request, set up with
 [coolify-kit](https://github.com/Goodboy-Innovations/coolify-kit): see [`docs/coolify.md`](docs/coolify.md).
 
-The Docker image applies pending migrations when it starts (`MIGRATE_ON_START=1`) and doesn't start if
-one fails.
+The built server checks its environment variables and applies pending migrations when it starts, and
+doesn't start if either fails. It needs `ORIGIN`, the site's address.
 
 ## Code layout
 
@@ -92,7 +92,7 @@ src/lib/server/modules/      one folder per domain, each with README.md, index.t
 src/lib/components/          UI components
 src/routes/                  (public) pages, dashboard/, admin/ — thin, they call modules
 src/lib/server/seed/         demo data (npm run db:seed, SEED_ON_START)
-drizzle/                     SQL migrations (the Docker image applies them at start)
+drizzle/                     SQL migrations (the built server applies them at start)
 compose.coolify.yaml         Coolify: production, staging, PR previews (docs/coolify.md)
 ```
 

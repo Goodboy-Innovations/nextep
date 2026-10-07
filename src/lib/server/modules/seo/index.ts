@@ -3,7 +3,7 @@ import { listSitemapEvents } from '../events';
 import { listVerifiedOrganizations, type Organization } from '../organizations';
 import type { EventRow, OccurrenceView } from '../events';
 
-export const absoluteUrl = (path: string) => `${config.publicUrl}${path}`;
+export const absoluteUrl = (path: string) => `${config.origin}${path}`;
 
 /** schema.org Event JSON-LD — makes event pages eligible for Google's event listings. */
 export function eventJsonLd(

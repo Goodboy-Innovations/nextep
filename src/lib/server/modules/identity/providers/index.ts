@@ -9,7 +9,7 @@ import type { OAuthProvider, ProviderFactory } from './types';
  */
 const FACTORIES: ProviderFactory[] = [google, microsoft];
 
-export const callbackURL = (id: string) => `${config.publicUrl}/login/${id}/callback`;
+export const callbackURL = (id: string) => `${config.origin}/login/${id}/callback`;
 
 let cache: OAuthProvider[] | null = null;
 

@@ -21,13 +21,12 @@ RUN npm ci --omit=dev
 FROM node:24-alpine AS runtime
 WORKDIR /app
 # BODY_SIZE_LIMIT: adapter-node rejects bodies over 512 kB by default; image uploads need more.
-# MIGRATE_ON_START: the server applies drizzle/ before it serves, and doesn't start if that fails.
 ENV NODE_ENV=production \
 	PORT=3000 \
-	BODY_SIZE_LIMIT=5M \
-	MIGRATE_ON_START=1
+	BODY_SIZE_LIMIT=5M
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
+# The server applies pending migrations from drizzle/ when it starts.
 COPY drizzle ./drizzle
 COPY package.json ./
 USER node

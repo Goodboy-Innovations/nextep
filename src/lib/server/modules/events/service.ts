@@ -70,7 +70,7 @@ export async function createEvent(
 		.from(organizations)
 		.where(eq(organizations.id, orgId));
 	const slug = await uniqueSlug(input.title, (s) => slugTaken(orgId, s));
-	const host = new URL(config.publicUrl).hostname;
+	const host = new URL(config.origin).hostname;
 	const [event] = await db
 		.insert(events)
 		.values({
