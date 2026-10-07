@@ -25,17 +25,6 @@ services:
       timeout: 5s
       retries: 30
 
-  migrate:
-    build:
-      context: .
-      target: build
-    command: ['npm', 'run', 'db:migrate']
-    environment:
-      DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
-    depends_on:
-      db:
-        condition: service_healthy
-
   app:
     build:
       context: .
@@ -55,8 +44,14 @@ services:
     ports:
       - '3000:3000'
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    # The app migrates the database before it starts serving (MIGRATE_ON_START in the image).
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/robots.txt > /dev/null || exit 1']
+      interval: 2s
+      timeout: 5s
+      retries: 60
     restart: unless-stopped
 
   seed:
@@ -68,8 +63,8 @@ services:
       DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
       PUBLIC_URL: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      app:
+        condition: service_healthy
     profiles: [tools]
 
 volumes:

@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Full source + dev dependencies. Also used by the `migrate` and `seed` compose services.
+# Full source + dev dependencies. Also used by the `seed` compose service.
 FROM deps AS build
 COPY . .
 # SvelteKit imports server modules while analysing the build; they need *a* database URL
@@ -21,11 +21,14 @@ RUN npm ci --omit=dev
 FROM node:24-alpine AS runtime
 WORKDIR /app
 # BODY_SIZE_LIMIT: adapter-node rejects bodies over 512 kB by default; image uploads need more.
+# MIGRATE_ON_START: the server applies drizzle/ before it serves, and doesn't start if that fails.
 ENV NODE_ENV=production \
 	PORT=3000 \
-	BODY_SIZE_LIMIT=5M
+	BODY_SIZE_LIMIT=5M \
+	MIGRATE_ON_START=1
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
+COPY drizzle ./drizzle
 COPY package.json ./
 USER node
 EXPOSE 3000

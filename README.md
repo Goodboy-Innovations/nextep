@@ -66,6 +66,15 @@ npm run dev                      # http://localhost:5173
 
 **Migrations:** at most one per PR. If `main` gained a migration since you branched, rebase and regenerate yours.
 
+## Deployment
+
+`compose.yaml` runs Nextep on any Docker host. Goodboy's Coolify runs production from release tags,
+staging from `main` and a preview with its own database for every pull request, set up with
+[coolify-kit](https://github.com/Goodboy-Innovations/coolify-kit): see [`docs/coolify.md`](docs/coolify.md).
+
+The Docker image applies pending migrations when it starts (`MIGRATE_ON_START=1`) and doesn't start if
+one fails.
+
 ## Code layout
 
 ```
@@ -82,8 +91,9 @@ src/lib/server/modules/      one folder per domain, each with README.md, index.t
   seo/                       JSON-LD, sitemap
 src/lib/components/          UI components
 src/routes/                  (public) pages, dashboard/, admin/ — thin, they call modules
-drizzle/                     SQL migrations
-scripts/seed.ts              demo data
+src/lib/server/seed/         demo data (npm run db:seed, SEED_ON_START)
+drizzle/                     SQL migrations (the Docker image applies them at start)
+compose.coolify.yaml         Coolify: production, staging, PR previews (docs/coolify.md)
 ```
 
 Start from a module's `README.md` and `index.ts`. Guidelines (not hard rules): import other modules through their `index.ts`, write to a module's tables only through its functions, keep route files thin.

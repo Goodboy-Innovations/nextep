@@ -1,0 +1,87 @@
+# nextep on Coolify (Docker Compose build pack). From Goodboy-Innovations/coolify-kit
+# (templates/compose.coolify.yaml); see its README before changing the variables or the command.
+# nextep's own setup: docs/coolify.md. For running nextep anywhere else, use compose.yaml.
+#
+# Every variable is a plain ${VAR}, without defaults: for ${VAR:-default}, Coolify writes the app's
+# own stored value into this file, and preview variables would never apply. Defaults live in the
+# app (src/lib/server/platform/config.ts and the identity providers).
+#
+# PR previews set IS_PR_BUILD=1 in their preview variables. At start, `devpg preview-env` makes
+# nextep/pr-<n> on dev-postgres a fresh copy of nextep/staging and exports its DATABASE_URL. The
+# app then applies the PR's migrations to staging's data before it serves (MIGRATE_ON_START=1 in
+# the image), and doesn't start if they fail. Production and staging don't run devpg at all.
+#
+# Previews use this file from main, not from the PR: a change here is tested only after it merges.
+
+services:
+  app:
+    build:
+      context: .
+    # devpg reads the PR number from COOLIFY_BRANCH (pull/<n>/head), which Coolify sets itself.
+    # Don't list Coolify's own variables (COOLIFY_BRANCH, SOURCE_COMMIT, …) under `environment`:
+    # Coolify then creates an empty variable of that name, stops setting it, and won't let you
+    # delete it while this file lists it.
+    #
+    # No `set -x`: the database URL holds a password. `env=$(…) && eval` rather than
+    # `eval "$(…)"`, which would succeed even when devpg fails. `exec`, so the app gets Coolify's
+    # stop signal.
+    command:
+      - sh
+      - -c
+      - |
+        if [ "$$IS_PR_BUILD" = 1 ]; then
+          wget -qO /tmp/devpg.mjs "$$DEVPG_URL/cli" &&
+          env=$$(node /tmp/devpg.mjs preview-env --from staging) && eval "$$env" || exit 1
+        fi
+        exec node build
+    environment:
+      # 1 in the preview variables only: this deployment is a PR preview.
+      IS_PR_BUILD: ${IS_PR_BUILD}
+      # Production and staging: their database (Postgres with PostGIS). PR previews: replaced by
+      # devpg at start. Set it to `none` in the preview variables, so a preview never sees the
+      # app's real database.
+      DATABASE_URL: ${DATABASE_URL}
+      # PR previews: the dev-postgres service (http://dev.postgres.internal) and an app key for nextep.
+      DEVPG_URL: ${DEVPG_URL}
+      DEVPG_KEY: ${DEVPG_KEY}
+      # This deployment's own address, from its Coolify domain (production, staging, each preview):
+      # canonical links, sitemap, ICS feeds and the OAuth redirect URIs.
+      PUBLIC_URL: ${SERVICE_URL_APP}
+      # SvelteKit's own origin (form actions' CSRF check, url.origin) from the proxy's headers, so
+      # the same image works on every domain.
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
+      # Staging only: SEED_ON_START=1 fills an empty database with demo data and an admin who
+      # signs in with SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (never the public demo password).
+      SEED_ON_START: ${SEED_ON_START}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      # Sign-in with Google / Microsoft. Unset providers are hidden. Each deployment needs
+      # {PUBLIC_URL}/login/{google,microsoft}/callback registered at the provider, so previews
+      # leave them empty.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET}
+      # Empty means "common": personal and work/school accounts.
+      MICROSOFT_TENANT: ${MICROSOFT_TENANT}
+      # Comma-separated emails that may sign in with Google/Microsoft without an invite and become
+      # platform admins: how the first admin gets into production.
+      ADMIN_EMAILS: ${ADMIN_EMAILS}
+    # Containers don't resolve the private network's .internal names (Docker's DNS doesn't forward
+    # them to Technitium), so previews reach dev-postgres through this entry. The service is
+    # behind the proxy there, which routes by this name. Remove once Docker on the server uses
+    # Technitium for DNS.
+    extra_hosts:
+      - 'dev.postgres.internal:10.0.0.4'
+    expose:
+      - '3000'
+    healthcheck:
+      # robots.txt needs no database, so this checks the server itself. It answers only once the
+      # migrations are done.
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/robots.txt > /dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped

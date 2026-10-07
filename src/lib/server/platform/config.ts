@@ -30,5 +30,17 @@ export const config = {
 	},
 	get defaultTimezone() {
 		return process.env.DEFAULT_TIMEZONE ?? 'Europe/Helsinki';
+	},
+	/** Apply pending migrations from drizzle/ when the server starts. The Docker image sets it. */
+	get migrateOnStart() {
+		return process.env.MIGRATE_ON_START === '1';
+	},
+	/** Fill a database without users with demo data when the server starts (staging). */
+	get seedOnStart() {
+		return process.env.SEED_ON_START === '1';
+	},
+	/** The admin login SEED_ON_START creates. Required with it: the demo password is public. */
+	get seedAdmin() {
+		return { email: required('SEED_ADMIN_EMAIL'), password: required('SEED_ADMIN_PASSWORD') };
 	}
 };
