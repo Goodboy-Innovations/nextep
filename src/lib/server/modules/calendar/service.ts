@@ -19,7 +19,7 @@ async function toIcsEvents(org: Organization, rows: EventRow[]): Promise<IcsEven
 		location: [e.venueName, e.streetAddress, e.city].filter(Boolean).join(', '),
 		lat: e.lat,
 		lng: e.lng,
-		url: `${config.publicUrl}/e/${org.slug}/${e.slug}`,
+		url: `${config.origin}/e/${org.slug}/${e.slug}`,
 		categories: (tags.get(e.id) ?? []).filter((t) => t.kind === 'category').map((t) => t.label),
 		updatedAt: e.updatedAt
 	}));

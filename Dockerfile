@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Full source + dev dependencies. Also used by the `migrate` and `seed` compose services.
+# Full source + dev dependencies. Also used by the `seed` compose service.
 FROM deps AS build
 COPY . .
 # SvelteKit imports server modules while analysing the build; they need *a* database URL
@@ -26,6 +26,8 @@ ENV NODE_ENV=production \
 	BODY_SIZE_LIMIT=5M
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
+# The server applies pending migrations from drizzle/ when it starts.
+COPY drizzle ./drizzle
 COPY package.json ./
 USER node
 EXPOSE 3000

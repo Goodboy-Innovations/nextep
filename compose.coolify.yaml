@@ -1,0 +1,55 @@
+# Nextep on Coolify (Docker Compose build pack). For local use, see compose.yaml.
+#
+# From Goodboy-Innovations/coolify-kit (templates/compose.coolify.yaml): its README covers the
+# start command, the preview variables and the Coolify quirks behind every choice here. PR
+# previews use this file from main, never the PR's, so keep it small and stable. Nextep's own
+# setup and variables: docs/coolify.md.
+#
+# Postgres (with PostGIS) runs outside this stack. The app checks its variables and applies
+# pending migrations when it starts, and doesn't start if either fails. In Coolify: give the `app`
+# service its domain on port 3000 (https://nextep.cloudgood.fi:3000). PR previews:
+# https://pr{{pr_id}}.nextep.cloudgood.fi, each with nextep/pr-<n> on dev-postgres, a fresh copy
+# of nextep/staging.
+
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    # The kit's start command: previews (IS_PR_BUILD=1 in their preview variables) get their
+    # database from devpg first, using DEVPG_URL and DEVPG_KEY. No `set -x`: the database URL
+    # holds a password.
+    command:
+      - sh
+      - -c
+      - |
+        if [ "$$IS_PR_BUILD" = 1 ]; then
+          wget -qO /tmp/devpg.mjs "$$DEVPG_URL/cli" &&
+          env=$$(node /tmp/devpg.mjs preview-env --from staging) && eval "$$env" || exit 1
+        fi
+        exec node build
+    # Every variable set in Coolify reaches the container through the .env file Coolify adds to
+    # each service, so only values this file builds itself are listed here. The app checks its
+    # variables at start and logs a summary. Which variables each deployment needs:
+    # docs/coolify.md. Never list Coolify's own (COOLIFY_BRANCH, SOURCE_COMMIT): Coolify then stops
+    # setting them.
+    environment:
+      # This deployment's own address, from its Coolify domain (production, staging, each preview),
+      # so SvelteKit needn't trust X-Forwarded-* headers. Listed here so a stored app variable of
+      # the same name can't give previews production's address. One domain per deployment:
+      # redirect any other domain to it in Coolify, or form posts there fail SvelteKit's CSRF check.
+      ORIGIN: ${SERVICE_URL_APP}
+    # Containers don't resolve .internal names yet (see the kit's Coolify quirks).
+    extra_hosts:
+      - 'dev.postgres.internal:10.0.0.4'
+    expose:
+      - '3000'
+    healthcheck:
+      # robots.txt needs no database, so this checks the server itself. It answers only once the
+      # migrations are done.
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/robots.txt > /dev/null || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped

@@ -25,26 +25,14 @@ services:
       timeout: 5s
       retries: 30
 
-  migrate:
-    build:
-      context: .
-      target: build
-    command: ['npm', 'run', 'db:migrate']
-    environment:
-      DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
-    depends_on:
-      db:
-        condition: service_healthy
-
   app:
     build:
       context: .
       target: runtime
     environment:
       DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
-      # Deliberately not PUBLIC_URL: that one in .env is for `npm run dev` (port 5173).
+      # Deliberately not .env's ORIGIN: that one is for `npm run dev` (port 5173).
       ORIGIN: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
-      PUBLIC_URL: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
       # Sign-in (values are read from .env; unset providers are hidden)
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
@@ -55,8 +43,14 @@ services:
     ports:
       - '3000:3000'
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    # The app checks its variables and migrates the database before it starts serving.
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/robots.txt > /dev/null || exit 1']
+      interval: 2s
+      timeout: 5s
+      retries: 60
     restart: unless-stopped
 
   seed:
@@ -66,10 +60,10 @@ services:
     command: ['npm', 'run', 'db:seed']
     environment:
       DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
-      PUBLIC_URL: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
+      ORIGIN: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      app:
+        condition: service_healthy
     profiles: [tools]
 
 volumes:
