@@ -10,29 +10,29 @@ describe('checkConfig', () => {
 	it('summarises a complete configuration without secrets', () => {
 		const summary = checkConfig({
 			...base,
-			GOOGLE_CLIENT_ID: 'id',
-			GOOGLE_CLIENT_SECRET: 'google-secret',
 			ADMIN_EMAILS: 'a@example.com, b@example.com',
 			SEED_ON_START: '1',
 			SEED_ADMIN_EMAIL: 'admin@example.com',
-			SEED_ADMIN_PASSWORD: 'seed-secret'
+			SEED_ADMIN_PASSWORD: 'seed-secret',
+			FEEDBACK_CHAT_URL: 'https://feedback.example',
+			FEEDBACK_SECRET: 'feedback-secret'
 		});
 		expect(summary).toBe(
-			'database db.example/nextep · url https://nextep.example · sign-in password, google · admin emails 2 · seed on'
+			'database db.example/nextep · url https://nextep.example · admin emails 2 · seed on · feedback chat on'
 		);
 		expect(summary).not.toMatch(/secret/);
 	});
 
 	it('names every problem at once', () => {
 		expect(() =>
-			checkConfig({ MICROSOFT_CLIENT_ID: 'id', SEED_ADMIN_EMAIL: 'a@example.com' })
+			checkConfig({ FEEDBACK_CHAT_URL: 'https://f.example', SEED_ADMIN_EMAIL: 'a@example.com' })
 		).toThrow(
 			[
 				'Configuration is incomplete:',
 				'- DATABASE_URL is not set',
 				'- ORIGIN is not set',
-				'- MICROSOFT_CLIENT_ID set without MICROSOFT_CLIENT_SECRET',
-				'- SEED_ADMIN_EMAIL set without SEED_ADMIN_PASSWORD'
+				'- SEED_ADMIN_EMAIL set without SEED_ADMIN_PASSWORD',
+				'- FEEDBACK_CHAT_URL set without FEEDBACK_SECRET'
 			].join('\n')
 		);
 	});
@@ -48,5 +48,12 @@ describe('checkConfig', () => {
 			'SEED_ON_START set without SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD'
 		);
 		expect(checkConfig(base)).toContain('seed off');
+	});
+
+	it('needs both feedback chat variables', () => {
+		expect(() => checkConfig({ ...base, FEEDBACK_SECRET: 's' })).toThrow(
+			'FEEDBACK_SECRET set without FEEDBACK_CHAT_URL'
+		);
+		expect(checkConfig(base)).toContain('feedback chat off');
 	});
 });

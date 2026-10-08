@@ -3,15 +3,18 @@ export {
 	SESSION_COOKIE,
 	authenticate,
 	createSession,
-	setPassword,
 	createUser,
 	findUserByEmail,
+	hasPassword,
 	invalidateSession,
+	listLinkedAccounts,
 	listUsers,
-	signInWithIdentity,
+	setAdmin,
+	setPassword,
+	signInWithExternalAccount,
 	validateSession,
 	type SessionUser,
 	type SignInResult
 } from './service';
-export { callbackURL, getProvider, listProviders, type OAuthProvider } from './providers';
-export { generateCodeVerifier, generateState } from 'arctic';
+export type { SignInRejection } from './resolve';
+export type { ExternalIdentity } from './types';

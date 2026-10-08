@@ -10,14 +10,33 @@ import {
 	type OrgStatus
 } from '$lib/server/modules/organizations';
 import { FRONT_PAGE_MAX_LIMIT } from '$lib/server/modules/featuring';
+import { listUsers } from '$lib/server/modules/identity';
+import { listInstances } from '$lib/server/modules/churchtools';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async () => ({
-	orgs: await listOrganizations(),
-	statuses: ORG_STATUSES,
-	cities: CITIES.map((c) => c.name),
-	maxFrontPage: FRONT_PAGE_MAX_LIMIT
-});
+export const load: PageServerLoad = async () => {
+	const [orgs, users, instances] = await Promise.all([
+		listOrganizations(),
+		listUsers(),
+		listInstances()
+	]);
+	const hosts = new Map(instances.map((i) => [i.orgId, i.host]));
+	const emails = new Map(users.map((u) => [u.id, `${u.name} (${u.email})`]));
+	// Churches waiting for review first.
+	const order = (status: OrgStatus) => (status === 'in_review' ? 0 : 1);
+	return {
+		orgs: orgs
+			.map((o) => ({
+				...o,
+				churchtoolsHost: hosts.get(o.id) ?? null,
+				registeredBy: o.registeredBy ? (emails.get(o.registeredBy) ?? null) : null
+			}))
+			.sort((a, b) => order(a.status) - order(b.status)),
+		statuses: ORG_STATUSES,
+		cities: CITIES.map((c) => c.name),
+		maxFrontPage: FRONT_PAGE_MAX_LIMIT
+	};
+};
 
 export const actions: Actions = {
 	frontPage: async ({ request, locals, url }) => {

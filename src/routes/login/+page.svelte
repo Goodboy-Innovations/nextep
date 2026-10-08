@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ChurchToolsSignIn from '$lib/components/churchtools/ChurchToolsSignIn.svelte';
+
 	let { data, form } = $props();
 	const query = $derived(data.next ? `?next=${encodeURIComponent(data.next)}` : '');
 	const error = $derived(form?.error ?? data.error);
@@ -9,7 +11,18 @@
 <div class="card login">
 	<h1>Järjestäjille</h1>
 	<p class="muted">Kirjaudu hallitsemaan seurakuntasi tai yhteisösi tapahtumia.</p>
-	{#if error}<p class="notice warn">{error}</p>{/if}
+	{#if error}
+		<p class="notice warn">
+			{error}
+			{#if data.unknownInstance}<a href="/register?instance={encodeURIComponent(data.instance)}"
+					>Rekisteröi seurakuntasi</a
+				>{/if}
+		</p>
+	{/if}
+
+	<ChurchToolsSignIn instance={data.instance} next={data.next} />
+
+	<div class="divider"><span>tai sähköpostilla</span></div>
 
 	<form method="POST" action={query || undefined}>
 		<div class="field">
@@ -33,22 +46,12 @@
 				required
 			/>
 		</div>
-		<button type="submit">Kirjaudu</button>
+		<button type="submit" class="secondary">Kirjaudu</button>
 	</form>
 
-	{#if data.providers.length}
-		<div class="divider"><span>tai</span></div>
-		<div class="providers">
-			{#each data.providers as provider (provider.id)}
-				<a class="button secondary provider" href="/login/{provider.id}{query}">
-					Kirjaudu: {provider.label}
-				</a>
-			{/each}
-		</div>
-	{/if}
-
 	<p class="hint">
-		Nextep on alpha-vaiheessa: järjestäjät kutsutaan. Tapahtumien selaaminen ei vaadi kirjautumista.
+		Seurakuntasi ei ole vielä Nextepissä? <a href="/register">Rekisteröi se ChurchToolsilla</a>.
+		Tapahtumien selaaminen ei vaadi kirjautumista.
 	</p>
 </div>
 
@@ -56,6 +59,9 @@
 	.login {
 		max-width: 420px;
 		margin: 40px auto;
+	}
+	.login form {
+		margin-bottom: 16px;
 	}
 	.divider {
 		display: flex;
@@ -70,14 +76,5 @@
 		content: '';
 		flex: 1;
 		border-top: 1px solid var(--border);
-	}
-	.providers {
-		display: flex;
-		flex-direction: column;
-		gap: 10px;
-		margin-bottom: 16px;
-	}
-	.provider {
-		justify-content: center;
 	}
 </style>

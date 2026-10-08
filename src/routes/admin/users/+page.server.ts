@@ -14,10 +14,18 @@ import {
 	listOrganizations,
 	type OrgRole
 } from '$lib/server/modules/organizations';
+import { providerHost } from '$lib/server/modules/churchtools';
 import type { Actions, PageServerLoad } from './$types';
 
+/** "salasana", "ChurchTools utopia.church.tools", or the provider id. */
+const methodLabel = (provider: string) => {
+	if (provider === 'password') return 'salasana';
+	const host = providerHost(provider);
+	return host ? `ChurchTools ${host}` : provider;
+};
+
 export const load: PageServerLoad = async () => ({
-	users: await listUsers(),
+	users: (await listUsers()).map((u) => ({ ...u, providers: u.providers.map(methodLabel) })),
 	orgs: await listOrganizations(),
 	roles: ORG_ROLES
 });
@@ -30,20 +38,14 @@ export const actions: Actions = {
 		const name = String(data.get('name') ?? '').trim();
 		const password = String(data.get('password') ?? '');
 		if (!email.includes('@') || !name) return fail(400, { error: 'Anna nimi ja sähköposti' });
-		if (password && password.length < MIN_PASSWORD_LENGTH) {
+		// Without a password the account couldn't sign in: ChurchTools never links by email.
+		if (password.length < MIN_PASSWORD_LENGTH) {
 			return fail(400, { error: `Salasanan pitää olla vähintään ${MIN_PASSWORD_LENGTH} merkkiä` });
 		}
 		if (await findUserByEmail(email)) return fail(400, { error: 'Sähköposti on jo käytössä' });
-		await createUser({
-			email,
-			name,
-			password: password || null,
-			isAdmin: data.get('isAdmin') === 'on'
-		});
+		await createUser({ email, name, password, isAdmin: data.get('isAdmin') === 'on' });
 		return {
-			message: password
-				? `${email} luotu. Hän voi kirjautua salasanalla tai Googlella/Microsoftilla.`
-				: `${email} kutsuttu. Hän voi kirjautua palvelulla, joka vahvistaa tämän osoitteen.`
+			message: `${email} luotu. Hän kirjautuu salasanalla ja voi liittää ChurchToolsin Oma tili -sivulla.`
 		};
 	},
 

@@ -10,12 +10,13 @@ export const users = pgTable('users', {
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-/** A user's identity at an OAuth provider. One user can link several providers. */
+/** A user's account at an external system (e.g. ChurchTools). One user can link several. */
 export const oauthAccounts = pgTable(
 	'oauth_accounts',
 	{
-		provider: text('provider').notNull(), // "google", "microsoft", …
-		/** The provider's stable user id (OIDC `sub`). */
+		/** Set by the module that owns the system, e.g. "churchtools:<host>". */
+		provider: text('provider').notNull(),
+		/** The system's stable user id. */
 		subject: text('subject').notNull(),
 		userId: uuid('user_id')
 			.notNull()

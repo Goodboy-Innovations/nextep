@@ -7,10 +7,19 @@
 <svelte:head><title>Hallinta — Nextep</title></svelte:head>
 
 <h1>Organisaatiot</h1>
-{#if data.orgs.length === 0}
-	<p class="card muted">
-		Et ole vielä minkään organisaation jäsen. Pyydä ylläpitoa lisäämään sinut.
+{#each data.pending as org (org.id)}
+	<p class="notice">
+		Odotat pääsyä organisaatioon <strong>{org.name}</strong>. Sen omistaja tai ylläpitäjä hyväksyy
+		pyyntösi.
 	</p>
+{/each}
+{#if data.orgs.length === 0}
+	{#if data.pending.length === 0}
+		<p class="card muted">
+			Et ole vielä minkään organisaation jäsen. Jos seurakuntasi ei ole vielä Nextepissä,
+			<a href="/register">rekisteröi se ChurchToolsilla</a>.
+		</p>
+	{/if}
 {:else}
 	<div class="stack">
 		{#each data.orgs as org (org.id)}

@@ -33,13 +33,9 @@ services:
       DATABASE_URL: postgres://nextep:nextep@db:5432/nextep
       # Deliberately not .env's ORIGIN: that one is for `npm run dev` (port 5173).
       ORIGIN: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
-      # Sign-in (values are read from .env; unset providers are hidden)
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
-      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
-      MICROSOFT_TENANT: ${MICROSOFT_TENANT:-common}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      FEEDBACK_CHAT_URL: ${FEEDBACK_CHAT_URL:-}
+      FEEDBACK_SECRET: ${FEEDBACK_SECRET:-}
     ports:
       - '3000:3000'
     depends_on:
