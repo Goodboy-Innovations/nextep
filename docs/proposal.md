@@ -130,20 +130,7 @@ Taxonomies are **data, not code**. Denominations, categories, age groups and lan
 
 **Decided:** Nextep is **free** for churches and seekers. Money is deliberately left for future ideas, so the system has **no billing, plans or subscription code**.
 
-The code is public under a **source-available licence that forbids using it to run a competing business**. Anyone can read it, contribute to it and self-host it for non-competing purposes. Established licences built for this:
-
-| Licence                                | Competing use                                  | Later becomes open source?                                    |
-| -------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------- |
-| **Functional Source License (FSL)**    | Forbidden                                      | Yes, each release converts to Apache 2.0 or MIT after 2 years |
-| **Business Source License 1.1 (BUSL)** | Forbidden, via a custom "additional use grant" | Yes, after a change date you choose (at most 4 years)         |
-| **PolyForm Shield**                    | Forbidden                                      | No                                                            |
-
-**Recommendation:** FSL. It's short and meant for exactly this case, and the automatic conversion to open source signals good faith to volunteer contributors. 🟡 Owner confirms the choice.
-
-Two practical notes:
-
-- These licences are _source-available_, not OSI-approved "open source". Use "source-available" in public wording to avoid confusion.
-- Add a **Contributor License Agreement (CLA)** or at least a DCO sign-off from the first external contribution. Without it, changing the licence later would need every contributor's consent.
+**Decided:** the code is public under the **MIT licence** ([`LICENSE`](../LICENSE)). Anyone can read, use, change and self-host it, including for their own service. Contributions are accepted under the same licence, so no CLA is needed.
 
 ### 2.13 Remaining questions
 
@@ -426,7 +413,7 @@ Postgres and SvelteKit are fixed. Everything else is a **default that can be swa
 - **Local setup:** `docker compose up` (Postgres+PostGIS, MinIO, Mailpit for catching email) → `npm install` → `npm run db:migrate && npm run db:seed` → `npm run dev`. The goal is **under 10 minutes from clone to a running app with realistic data**.
 - **Seed data:** about 15 fictional organizations across several Finnish cities, with weekly and one-off events, all taxonomies and a demo login per role. Discovery, dashboard and ranking tests all rely on it.
 - **Migrations:** generated from each module's `schema.ts`. **Rule: at most one migration per PR, and if `main` gained a migration since you branched, rebase and regenerate yours instead of merging two migration histories.** CI fails if the schema and migrations disagree.
-- **Licence & contributions:** the FSL-style licence (§2.12) plus a CLA or DCO sign-off, checked in CI.
+- **Licence & contributions:** MIT (§2.12); contributions under the same licence.
 - **CI gates:** format → lint → `svelte-check` typecheck → unit tests → integration tests on Postgres → Playwright smoke tests → build.
 - **Decisions:** `docs/adr/NNN-title.md`, short, one per significant choice (for example "why Drizzle", "why no RLS", "ranking weights v2").
 - **Issues:** labeled by module (`module:events`) and `good first issue`. The calendar export, widget, analytics and seo modules are deliberately isolated so they suit newcomers.

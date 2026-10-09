@@ -1,6 +1,7 @@
 {
 	"name": "nextep",
 	"private": true,
+	"license": "MIT",
 	"version": "0.1.0-alpha",
 	"type": "module",
 	"scripts": {

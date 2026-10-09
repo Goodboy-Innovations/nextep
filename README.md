@@ -116,4 +116,4 @@ Not yet: ICS import, email notifications (invites are added by email, but no ema
 
 ## Licence
 
-To be decided — see `docs/proposal.md` §2.12.
+[MIT](LICENSE). Contributions are accepted under the same licence.
