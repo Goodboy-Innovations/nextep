@@ -2,6 +2,8 @@
 
 Find spiritual events near you. Nextep ranks upcoming events by time, distance, the seeker's preferences and free-text search, and gives churches a simple dashboard, SEO-friendly event pages and calendar feeds.
 
+**Staging:** https://staging.nextep.cloudgood.dev (`main`, demo data). **Pull requests:** each gets a preview at `https://pr<n>.nextep.cloudgood.dev`, linked from the PR once it's deployed.
+
 **Status: v0.1.0-alpha.** See [`docs/idea.md`](docs/idea.md) for the concept and [`docs/proposal.md`](docs/proposal.md) for the technical direction.
 
 ## Quick start (Docker — Windows, macOS, Linux)
