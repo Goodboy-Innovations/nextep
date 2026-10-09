@@ -11,7 +11,6 @@ Valmiina:
 - Kirjautuminen: sähköposti + salasana **ja** ChurchTools-OAuth (seurakunnan oma instanssi). Seurakunta rekisteröityy itse (`/register`) → organisaatio `in_review` → ylläpito vahvistaa. ChurchToolsin sähköposteihin ei luoteta: ei linkitystä sähköpostilla, liittäminen Oma tili -sivulla. `ADMIN_EMAILS` vain salasanakirjautumisessa, `npm run create-admin` uudelle asennukselle.
 - **Etusivu ilman manuaalista nostoa** (2026-09-29): tapahtuma pääsee etusivulle automaattisesti, jos sillä on kuva ja ≥200 merkin kuvaus. Organisaatiolta enintään `front_page_limit` (oletus 5, admin 0–10) tapahtumaa samalta viikolta; mitkä, ratkaistaan kävijäkohtaisesti rankingilla (`row_number() over (partition by org …)` `discovery/search.ts`:ssä). `event_features`-taulu ja Nosta-painikkeet poistettu (migraatio 0005). Hallinnassa näkyy tapahtumakohtaisesti, mitä etusivulta puuttuu.
 - Kuvat (JPEG/PNG/WebP, max 3 Mt) Postgresissa `bytea`, pienennys selaimessa.
-- Palautechat kirjautuneille (`FEEDBACK_CHAT_URL`, `FEEDBACK_SECRET`), pois päältä ilman niitä.
 - Vaalea teema. Yksikkötestit (`npm test`), svelte-check ja lint.
 
 ### Haun uudistus (tehty 2026-09-29)

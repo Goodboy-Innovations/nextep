@@ -26,8 +26,8 @@ the deployment's own domain. When the built server starts (`src/hooks.server.ts`
 1. **It checks its variables** (`checkConfig()` in `src/lib/server/platform/config.ts`) and stops with
    one message naming every problem: `DATABASE_URL` missing or not a `postgres://` URL (a preview's
    `none` that devpg didn't replace), `ORIGIN` missing, half-set pairs (`SEED_ADMIN_EMAIL` without its
-   password), `SEED_ON_START` without `SEED_ADMIN_*`, `FEEDBACK_SECRET` without `FEEDBACK_CHAT_URL`. Otherwise it logs a summary without secrets:
-   `Config: database <host>/<db> · url <ORIGIN> · admin emails 1 · seed off · feedback chat off`.
+   password), `SEED_ON_START` without `SEED_ADMIN_*`. Otherwise it logs a summary without secrets:
+   `Config: database <host>/<db> · url <ORIGIN> · admin emails 1 · seed off`.
 2. **It applies pending migrations** from `drizzle/` and stops if one fails, so a broken migration
    fails the preview, not production.
 3. **With `SEED_ON_START=1`** (staging), a database without users gets the demo data, with an admin
@@ -67,11 +67,10 @@ The last one prints the key once: put it straight into the preview variables as 
    release tags. Domain of the `app` service: `https://nextep.cloudgood.fi:3000`.
 3. **Variables** (in Coolify, not in the compose file):
 
-   | Variable                               | Value                                                                                                                                                                                                                                                |
-   | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `DATABASE_URL`                         | The database's internal URL                                                                                                                                                                                                                          |
-   | `ADMIN_EMAILS`                         | Your own address: it becomes a platform admin when it signs in with a password. The runtime image has no `tsx`, so create that login once from a checkout: `DATABASE_URL=<production's, e.g. through an SSH tunnel> npm run create-admin -- <email>` |
-   | `FEEDBACK_CHAT_URL`, `FEEDBACK_SECRET` | Optional: the feedback chat for signed-in users. `https://feedback-chat.cloudgood.fi` and the "nextep" project's secret there                                                                                                                        |
+   | Variable       | Value                                                                                                                                                                                                                                                |
+   | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `DATABASE_URL` | The database's internal URL                                                                                                                                                                                                                          |
+   | `ADMIN_EMAILS` | Your own address: it becomes a platform admin when it signs in with a password. The runtime image has no `tsx`, so create that login once from a checkout: `DATABASE_URL=<production's, e.g. through an SSH tunnel> npm run create-admin -- <email>` |
 
    No `DEVPG_*`, no `SEED_*`. **Preview deployments off**: previews live on DEV1.
 
@@ -87,7 +86,6 @@ and compose file, on `main`, domain `https://staging.nextep.cloudgood.dev:3000`.
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | The staging admin's login; the password from the password manager |
 | `STAGING_RESET`                           | `on-merge`: DEV1 rebuilds `nextep/staging` after every merge      |
 | `ADMIN_EMAILS`                            | Optional                                                          |
-| `FEEDBACK_CHAT_URL`, `FEEDBACK_SECRET`    | Optional, as in production                                        |
 
 Staging deploys only `main`: if it ran an open PR's migration, other previews copied from it would
 skip their own older migrations (see the kit's environments doc).

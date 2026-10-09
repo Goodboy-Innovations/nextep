@@ -1,7 +1,6 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import FeedbackChat from '$lib/components/FeedbackChat.svelte';
 
 	let { children, data } = $props();
 </script>
@@ -48,10 +47,6 @@
 		</nav>
 	</div>
 </footer>
-
-{#if data.feedbackEndpoint}
-	<FeedbackChat endpoint={data.feedbackEndpoint} userName={data.user?.name} />
-{/if}
 
 <style>
 	.site-header {
