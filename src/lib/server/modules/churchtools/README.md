@@ -52,4 +52,4 @@ The church's name and address can be filled from `/api/info` with a button on th
 
 Linked accounts are stored as `oauth_accounts.provider = "churchtools:<host>"`, `subject` = person id (ids are only unique within one instance). Never change a host's spelling once in use.
 
-**One redirect URI per client:** ChurchTools allows one redirect URI per OAuth client, so an instance works on one Nextep domain. PR previews (`pr15.staging.nextep.fi`) would each need their own client; test ChurchTools sign-in on staging or locally.
+**One redirect URI per client:** ChurchTools allows one redirect URI per OAuth client, so an instance works on one Nextep domain. PR previews (`pr15.nextep.cloudgood.dev`) would each need their own client; test ChurchTools sign-in on staging or locally.

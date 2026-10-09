@@ -2,13 +2,21 @@
 
 Find spiritual events near you. Nextep ranks upcoming events by time, distance, the seeker's preferences and free-text search, and gives churches a simple dashboard, SEO-friendly event pages and calendar feeds.
 
-**Staging:** https://staging.nextep.cloudgood.dev (`main`, demo data). **Pull requests:** each gets a preview at `https://pr<n>.nextep.cloudgood.dev`, linked from the PR once it's deployed.
+**Status: v0.1.0-alpha.** UI in Finnish.
 
-**Status: v0.1.0-alpha.** See [`docs/idea.md`](docs/idea.md) for the concept and [`docs/proposal.md`](docs/proposal.md) for the technical direction.
+|                |                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| Staging        | https://staging.nextep.cloudgood.dev: `main` with demo data                                    |
+| PR previews    | `https://pr<n>.nextep.cloudgood.dev`, with its own copy of staging's data                      |
+| Concept        | [`docs/idea.md`](docs/idea.md)                                                                 |
+| Technical plan | [`docs/proposal.md`](docs/proposal.md)                                                         |
+| Where we are   | [`docs/handoff.md`](docs/handoff.md) (Finnish)                                                 |
+| Hosting        | [`docs/coolify.md`](docs/coolify.md): production, staging and previews                         |
+| Sign-in        | [`src/lib/server/modules/churchtools/README.md`](src/lib/server/modules/churchtools/README.md) |
 
-## Quick start (Docker — Windows, macOS, Linux)
+## Quick start (Docker)
 
-Requires Docker Desktop (or Docker Engine with the compose plugin).
+Requires Docker Desktop, or Docker Engine with the compose plugin.
 
 ```sh
 cp .env.example .env
@@ -16,7 +24,7 @@ docker compose up --build -d     # database, migrations, app
 docker compose run --rm seed     # demo data (once)
 ```
 
-Open http://localhost:3000. Browsing needs no account. Demo logins for organizers:
+Open http://localhost:3000. Browsing needs no account. Demo logins for organizers (local only; staging has its own admin login):
 
 | Email                    | Password       | Role                                      |
 | ------------------------ | -------------- | ----------------------------------------- |
@@ -25,20 +33,9 @@ Open http://localhost:3000. Browsing needs no account. Demo logins for organizer
 
 Stop with `docker compose down` (add `-v` to delete the database).
 
-## Sign-in
-
-Organizers sign in with their church's **ChurchTools** (they type the subdomain, e.g. `utopia` for `utopia.church.tools`) or with **email + password**. Details: `src/lib/server/modules/churchtools/README.md`.
-
-- **A church registers itself** on `/register`: its ChurchTools admin adds an OAuth client named `Nextep` in ChurchTools (Järjestelmäasetukset → Yleinen → Kirjaudu sisään → "Kirjaudu kolmannen osapuolen järjestelmään ChurchTools-käyttäjätilillä"), copies the client secret ChurchTools shows once, sets the client's redirect URI to `{ORIGIN}/login/churchtools/callback`, then enters the subdomain, client ID and secret on `/register` and signs in. If ChurchTools later doesn't accept the client (e.g. it was deleted), sign-in treats the church as not registered; registering again replaces the client and keeps the organization. The organization starts **in review**; platform admins verify it under Ylläpito, and only then are its events public.
-- **Other members** of that church sign in with ChurchTools and wait until the organization's owner lets them in.
-- **ChurchTools emails are not trusted**: they never link to an existing account. Someone who already has a password account signs in with it and connects ChurchTools on Oma tili.
-- **Platform admins**: `ADMIN_EMAILS` (comma-separated) makes those addresses admins when they sign in with email + password. On a fresh installation, create the first one with `npm run create-admin -- you@example.fi "Your Name"` (prints a password).
-
-Each church's client ID and secret are stored per instance in the database, so ChurchTools needs no environment variables. For local testing use the redirect URI `http://localhost:5173/login/churchtools/callback`.
-
 ## Development
 
-Node 24+. The database runs in Docker, the app runs locally with hot reload:
+Node 24+. The database runs in Docker, the app locally with hot reload:
 
 ```sh
 docker compose up -d db
@@ -49,27 +46,33 @@ npm run db:seed
 npm run dev                      # http://localhost:5173
 ```
 
-| Command                | What it does                                    |
-| ---------------------- | ----------------------------------------------- |
-| `npm run dev`          | Dev server                                      |
-| `npm test`             | Unit tests (Vitest)                             |
-| `npm run check`        | Type check (svelte-check)                       |
-| `npm run lint`         | Prettier + ESLint                               |
-| `npm run db:generate`  | Create a migration after changing a `schema.ts` |
-| `npm run db:migrate`   | Apply migrations                                |
-| `npm run db:seed`      | Demo data (`-- --reset` wipes everything first) |
-| `npm run create-admin` | Platform admin with a password (`-- <email>`)   |
+| Command                | What it does                                           |
+| ---------------------- | ------------------------------------------------------ |
+| `npm run dev`          | Dev server                                             |
+| `npm test`             | Unit tests (Vitest)                                    |
+| `npm run check`        | Type check (svelte-check)                              |
+| `npm run lint`         | Prettier + ESLint                                      |
+| `npm run db:generate`  | Create a migration after changing a `schema.ts`        |
+| `npm run db:migrate`   | Apply migrations                                       |
+| `npm run db:seed`      | Demo data (`-- --reset` wipes everything first)        |
+| `npm run create-admin` | Platform admin with a password (`-- <email> "<name>"`) |
 
-**Migrations:** at most one per PR. If `main` gained a migration since you branched, rebase and regenerate yours.
+## Contributing
+
+- Work on a branch in this repository and open a pull request. `main` takes changes only through a PR approved by someone other than its author.
+- Each PR gets a preview, linked from the PR once it's deployed. Branches from forks get no preview.
+- After a merge, staging deploys `main` and starts again from a fresh demo dataset.
+- **Migrations:** at most one per PR. If `main` gained a migration since you branched, rebase and regenerate yours.
+
+## Sign-in
+
+Organizers sign in with their church's **ChurchTools** or with **email + password**. A church registers itself on `/register` with an OAuth client from its own ChurchTools, and its organization is public once a platform admin verifies it. ChurchTools emails are never trusted to link accounts. ChurchTools needs no environment variables; platform admins come from `ADMIN_EMAILS` or `npm run create-admin`. The flows: [`churchtools/README.md`](src/lib/server/modules/churchtools/README.md).
+
+ChurchTools allows one redirect URI per OAuth client, so test ChurchTools sign-in on staging or locally (`http://localhost:5173/login/churchtools/callback`), not on previews.
 
 ## Deployment
 
-`compose.yaml` runs Nextep on any Docker host. Goodboy's Coolify runs production from release tags,
-staging from `main` and a preview with its own database for every pull request, set up with
-[coolify-kit](https://github.com/Goodboy-Innovations/coolify-kit): see [`docs/coolify.md`](docs/coolify.md).
-
-The built server checks its environment variables and applies pending migrations when it starts, and
-doesn't start if either fails. It needs `ORIGIN`, the site's address.
+`compose.yaml` runs Nextep on any Docker host. The built server checks its environment variables and applies pending migrations when it starts, and doesn't start if either fails. It needs `DATABASE_URL` and `ORIGIN`, the site's address. Goodboy's setup with [coolify-kit](https://github.com/Goodboy-Innovations/coolify-kit): [`docs/coolify.md`](docs/coolify.md).
 
 ## Code layout
 
