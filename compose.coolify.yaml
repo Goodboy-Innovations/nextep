@@ -7,9 +7,9 @@
 #
 # Postgres (with PostGIS) runs outside this stack. The app checks its variables and applies
 # pending migrations when it starts, and doesn't start if either fails. In Coolify: give the `app`
-# service its domain on port 3000 (https://nextep.cloudgood.fi:3000). PR previews:
-# https://pr{{pr_id}}.nextep.cloudgood.fi, each with nextep/pr-<n> on dev-postgres, a fresh copy
-# of nextep/staging.
+# service its domain on port 3000 (https://nextep.cloudgood.fi:3000). Staging and PR previews run
+# on DEV1 (https://pr{{pr_id}}.nextep.cloudgood.dev), each preview with nextep/pr-<n> on
+# dev-postgres, a fresh copy of nextep/staging.
 
 services:
   app:
@@ -36,12 +36,9 @@ services:
     environment:
       # This deployment's own address, from its Coolify domain (production, staging, each preview),
       # so SvelteKit needn't trust X-Forwarded-* headers. Listed here so a stored app variable of
-      # the same name can't give previews production's address. One domain per deployment:
+      # the same name can't give previews another deployment's address. One domain per deployment:
       # redirect any other domain to it in Coolify, or form posts there fail SvelteKit's CSRF check.
       ORIGIN: ${SERVICE_URL_APP}
-    # Containers don't resolve .internal names yet (see the kit's Coolify quirks).
-    extra_hosts:
-      - 'dev.postgres.internal:10.0.0.4'
     expose:
       - '3000'
     healthcheck:

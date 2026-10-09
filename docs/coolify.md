@@ -1,20 +1,21 @@
 # Nextep on Coolify: production, staging and PR previews
 
 Nextep runs on Goodboy's Coolify the way [coolify-kit](https://github.com/Goodboy-Innovations/coolify-kit)
-describes: production from release tags, staging from `main`, and a preview for every pull request
-with its own copy of staging's database. Read the kit's README and
+describes: production from release tags on the production Coolify, and on DEV1's Coolify (project
+`nextep`) staging from `main` and a preview for every pull request with its own copy of staging's
+database. Read the kit's README and
 [Coolify quirks](https://github.com/Goodboy-Innovations/coolify-kit/blob/main/docs/coolify-quirks.md)
 before changing [`compose.coolify.yaml`](../compose.coolify.yaml) or the Coolify settings.
 
 Secrets (keys, database URLs, OAuth secrets, passwords) go straight into Coolify: never into this
 repository, a chat or a log.
 
-|            | Code                  | Database                                                         | Domain                                |
-| ---------- | --------------------- | ---------------------------------------------------------------- | ------------------------------------- |
-| Production | Release tags (`v0.2`) | Its own Postgres with PostGIS                                    | `https://nextep.cloudgood.fi`         |
-| Staging    | `main`, automatically | `nextep/staging` on dev-postgres, seeded with demo data once     | `https://staging.nextep.cloudgood.fi` |
-| PR preview | The PR                | `nextep/pr-<n>`, a fresh copy of staging on every push           | `https://pr<n>.nextep.cloudgood.fi`   |
-| Computer   | Working copy          | Docker (`compose.yaml`), or `nextep/dev-<user>` with `devpg dev` | `http://localhost:5173`               |
+|            | Code                  | Database                                                         | Domain                                 |
+| ---------- | --------------------- | ---------------------------------------------------------------- | -------------------------------------- |
+| Production | Release tags (`v0.2`) | Its own Postgres with PostGIS                                    | `https://nextep.cloudgood.fi`          |
+| Staging    | `main`, automatically | `nextep/staging` on dev-postgres, demo data, rebuilt on merge    | `https://staging.nextep.cloudgood.dev` |
+| PR preview | The PR                | `nextep/pr-<n>`, a fresh copy of staging on every push           | `https://pr<n>.nextep.cloudgood.dev`   |
+| Computer   | Working copy          | Docker (`compose.yaml`), or `nextep/dev-<user>` with `devpg dev` | `http://localhost:5173`                |
 
 ## What the app does for it
 
@@ -72,17 +73,19 @@ The last one prints the key once: put it straight into the preview variables as 
    | `ADMIN_EMAILS`                         | Your own address: it becomes a platform admin when it signs in with a password. The runtime image has no `tsx`, so create that login once from a checkout: `DATABASE_URL=<production's, e.g. through an SSH tunnel> npm run create-admin -- <email>` |
    | `FEEDBACK_CHAT_URL`, `FEEDBACK_SECRET` | Optional: the feedback chat for signed-in users. `https://feedback-chat.cloudgood.fi` and the "nextep" project's secret there                                                                                                                        |
 
-   No `DEVPG_*`, no `SEED_*`.
+   No `DEVPG_*`, no `SEED_*`. **Preview deployments off**: previews live on DEV1.
 
-### Staging (a second Coolify app)
+### Staging (on DEV1's Coolify)
 
-Same repository and compose file, on `main`, domain `https://staging.nextep.cloudgood.fi:3000`.
+App `nextep-staging` in project `nextep`: same repository (through the `coolify-dev1` GitHub App)
+and compose file, on `main`, domain `https://staging.nextep.cloudgood.dev:3000`.
 
 | Variable                                  | Value                                                             |
 | ----------------------------------------- | ----------------------------------------------------------------- |
 | `DATABASE_URL`                            | `devpg url nextep/staging`                                        |
 | `SEED_ON_START`                           | `1`                                                               |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | The staging admin's login; the password from the password manager |
+| `STAGING_RESET`                           | `on-merge`: DEV1 rebuilds `nextep/staging` after every merge      |
 | `ADMIN_EMAILS`                            | Optional                                                          |
 | `FEEDBACK_CHAT_URL`, `FEEDBACK_SECRET`    | Optional, as in production                                        |
 
@@ -91,19 +94,21 @@ skip their own older migrations (see the kit's environments doc).
 
 ### PR previews
 
-On the **production** app: Preview Deployments on, domain `https://pr{{pr_id}}.nextep.cloudgood.fi:3000`,
-and these preview variables (Configuration → Preview Deployments → Environment Variables). A preview
-inherits every production variable it doesn't set, so everything that must differ is listed:
+On the **staging** app: Preview Deployments on, "Public PR deployments" off, domain
+`https://pr{{pr_id}}.nextep.cloudgood.dev`, and these preview variables (Configuration → Preview
+Deployments → Environment Variables). A preview inherits every staging variable it doesn't set, so
+everything that must differ is listed:
 
 ```sh
 # This deployment is a PR preview: the start command runs devpg.
 IS_PR_BUILD=1
-# Never production's database. devpg replaces it at start, and stops the start if it can't.
+# Never staging's database. devpg replaces it at start, and stops the start if it can't.
 DATABASE_URL=none
-DEVPG_URL=http://dev.postgres.internal
+DEVPG_URL=https://devpg.cloudgood.dev
 # The app key from `devpg key-create --app nextep`.
 DEVPG_KEY=
-ADMIN_EMAILS=
+# A preview copies staging's data, so it never seeds.
+SEED_ON_START=0
 ```
 
 Sign in to a preview with the staging admin's login: the preview's database is a copy of staging's.
@@ -115,21 +120,21 @@ or `ORIGIN` (the compose file sets it); delete any such one.
 
 ## Checking it
 
-- Staging's log shows `Config: database …/nextep_staging · url https://staging.nextep.cloudgood.fi · …
+- Staging's log shows `Config: database …/nextep_staging · url https://staging.nextep.cloudgood.dev · …
 · seed on`, `[migrate] database is up to date` and `[seed] demo data added`, and the front page
   shows the demo events.
 - A test PR's preview log shows `devpg: copied staging into nextep/pr-<n>`, then the config summary
   with `nextep_pr-<n>` and the preview's own address, then the migrations, and the preview shows
   staging's data.
 - A preview without `DEVPG_KEY` doesn't start.
-- When a PR closes, Coolify removes the preview but not its database: `devpg drop nextep/pr-<n>`, until
-  dev-postgres drops idle ones itself.
+- When a PR closes, Coolify removes the preview, and DEV1 drops `nextep/pr-<n>` within 15 minutes.
 
 ## Changing `compose.coolify.yaml` later
 
-Previews can't test it, and merging it redeploys production with it at once: follow the kit's
+Previews can't test it, and merging it redeploys staging with it at once, and production at the next
+release: follow the kit's
 [changing the compose file](https://github.com/Goodboy-Innovations/coolify-kit/blob/main/docs/new-app.md#later-changing-composecoolifyyaml),
-and read production's and a preview's config summary afterwards. Adding or renaming a variable needs
+and read staging's, a preview's and, after the release, production's config summary. Adding or renaming a variable needs
 no compose change: set it in Coolify, and when one is renamed or dropped, delete the old one there
 too (app and preview variables).
 
