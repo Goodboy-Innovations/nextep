@@ -34,8 +34,6 @@ services:
       # Deliberately not .env's ORIGIN: that one is for `npm run dev` (port 5173).
       ORIGIN: ${DOCKER_PUBLIC_URL:-http://localhost:3000}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
-      FEEDBACK_CHAT_URL: ${FEEDBACK_CHAT_URL:-}
-      FEEDBACK_SECRET: ${FEEDBACK_SECRET:-}
     ports:
       - '3000:3000'
     depends_on:
