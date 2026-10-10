@@ -38,7 +38,7 @@ Ei sovittu. Ehdokkaita: haun ulkoasun hienosäätö käyttäjän palautteen peru
 
 - Staging: https://staging.nextep.cloudgood.dev (`main`, demodata, rakennetaan uudelleen jokaisen mergen jälkeen).
 - PR-esikatselut: `https://pr<n>.nextep.cloudgood.dev`, kukin omalla kopiollaan stagingin datasta.
-- Tuotanto: ei vielä. Asetukset: [`coolify.md`](coolify.md).
+- Tuotanto: ei vielä. Asetukset: `README.md`, Deployment.
 
 ## Repo
 

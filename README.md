@@ -11,7 +11,6 @@ Find spiritual events near you. Nextep ranks upcoming events by time, distance, 
 | Concept        | [`docs/idea.md`](docs/idea.md)                                                                 |
 | Technical plan | [`docs/proposal.md`](docs/proposal.md)                                                         |
 | Where we are   | [`docs/handoff.md`](docs/handoff.md) (Finnish)                                                 |
-| Hosting        | [`docs/coolify.md`](docs/coolify.md): production, staging and previews                         |
 | Sign-in        | [`src/lib/server/modules/churchtools/README.md`](src/lib/server/modules/churchtools/README.md) |
 
 ## Quick start (Docker)
@@ -72,7 +71,22 @@ ChurchTools allows one redirect URI per OAuth client, so test ChurchTools sign-i
 
 ## Deployment
 
-`compose.yaml` runs Nextep on any Docker host. The built server checks its environment variables and applies pending migrations when it starts, and doesn't start if either fails. It needs `DATABASE_URL` and `ORIGIN`, the site's address. Goodboy's setup with [coolify-kit](https://github.com/Goodboy-Innovations/coolify-kit): [`docs/coolify.md`](docs/coolify.md).
+`compose.yaml` runs Nextep on any Docker host, and `compose.coolify.yaml` on Coolify (Docker Compose build pack). Postgres with PostGIS runs outside the stack: migration `0000` runs `create extension postgis`, so the database's own login must be allowed to create it. Uploaded images live in Postgres, so there is no bucket.
+
+When the built server starts (`src/hooks.server.ts`):
+
+1. **It checks its variables** (`checkConfig()` in `src/lib/server/platform/config.ts`) and stops with one message naming every problem, or logs a summary without secrets: `Config: database <host>/<db> · url <ORIGIN> · admin emails 1 · seed off`.
+2. **It applies pending migrations** from `drizzle/` and stops if one fails.
+3. **With `SEED_ON_START=1`**, a database without users gets the demo data, with an admin who signs in with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`.
+
+| Variable                                                   | Value                                                                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                                             | Required. A `postgres://` URL                                                                                |
+| `ORIGIN`                                                   | Required. The site's address: CSRF check of form posts, canonical links, ICS feeds, ChurchTools redirect URI |
+| `ADMIN_EMAILS`                                             | Optional. Addresses that become platform admins when they sign in with a password                            |
+| `SEED_ON_START`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Optional. Demo data for a staging server                                                                     |
+
+Serve each deployment on one domain and redirect any other to it, or form posts there fail SvelteKit's CSRF check. The runtime image has no `tsx`, so create a server's first admin from a checkout: `DATABASE_URL=<the server's> npm run create-admin -- <email>`.
 
 ## Code layout
 
@@ -93,7 +107,7 @@ src/lib/components/          UI components
 src/routes/                  (public) pages, dashboard/, admin/ — thin, they call modules
 src/lib/server/seed/         demo data (npm run db:seed, SEED_ON_START)
 drizzle/                     SQL migrations (the built server applies them at start)
-compose.coolify.yaml         Coolify: production, staging, PR previews (docs/coolify.md)
+compose.coolify.yaml         Coolify: production, staging, PR previews
 ```
 
 Start from a module's `README.md` and `index.ts`. Guidelines (not hard rules): import other modules through their `index.ts`, write to a module's tables only through its functions, keep route files thin.
