@@ -1,24 +1,19 @@
 # Nextep on Coolify (Docker Compose build pack). For local use, see compose.yaml.
 #
-# From Goodboy-Innovations/coolify-kit (templates/compose.coolify.yaml): its README covers the
-# start command, the preview variables and the Coolify quirks behind every choice here. PR
-# previews use this file from main, never the PR's, so keep it small and stable. Nextep's own
-# setup and variables: docs/coolify.md.
+# PR previews use this file from main, never the PR's, so keep it small and stable.
 #
 # Postgres (with PostGIS) runs outside this stack. The app checks its variables and applies
-# pending migrations when it starts, and doesn't start if either fails. In Coolify: give the `app`
-# service its domain on port 3000 (https://nextep.cloudgood.fi:3000). Staging and PR previews run
-# on DEV1 (https://pr{{pr_id}}.nextep.cloudgood.dev), each preview with nextep/pr-<n> on
-# dev-postgres, a fresh copy of nextep/staging.
+# pending migrations when it starts, and doesn't start if either fails (README: Deployment). In
+# Coolify: give the `app` service its domain on port 3000.
 
 services:
   app:
     build:
       context: .
       target: runtime
-    # The kit's start command: previews (IS_PR_BUILD=1 in their preview variables) get their
-    # database from devpg first, using DEVPG_URL and DEVPG_KEY. No `set -x`: the database URL
-    # holds a password.
+    # PR previews (IS_PR_BUILD=1 in their preview variables) first fetch a client from DEVPG_URL,
+    # which gives them their own copy of staging's database (DEVPG_KEY). No `set -x`: the database
+    # URL holds a password.
     command:
       - sh
       - -c
@@ -30,9 +25,8 @@ services:
         exec node build
     # Every variable set in Coolify reaches the container through the .env file Coolify adds to
     # each service, so only values this file builds itself are listed here. The app checks its
-    # variables at start and logs a summary. Which variables each deployment needs:
-    # docs/coolify.md. Never list Coolify's own (COOLIFY_BRANCH, SOURCE_COMMIT): Coolify then stops
-    # setting them.
+    # variables at start and logs a summary. Which variables it needs: README, Deployment. Never
+    # list Coolify's own (COOLIFY_BRANCH, SOURCE_COMMIT): Coolify then stops setting them.
     environment:
       # This deployment's own address, from its Coolify domain (production, staging, each preview),
       # so SvelteKit needn't trust X-Forwarded-* headers. Listed here so a stored app variable of
